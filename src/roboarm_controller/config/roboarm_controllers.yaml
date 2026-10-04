@@ -1,0 +1,53 @@
+
+controller_manager: # node name 
+  ros__parameters:    
+    update_rate: 10   # parameter frequency at which controll loop executed
+
+    # define controllers names, that controller manger will use
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+      # type: joint_trajectory_controller/JointTrajectoryController
+    gripper_controller:
+      # type: joint_trajectory_controller/controller/JointTrajectoryController
+      # type: joint_trajectory_controller/JointTrajectoryController
+      type: forward_command_controller/ForwardCommandController
+
+    # to notify the state(positions) of the joint of the robot
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+# decalare the controllers which we define in comtroller manager
+arm_controller:
+  ros__parameters:
+    joints: 
+      - joint_1
+      - joint_2
+      - joint_3
+
+    command_interfaces: 
+      - position
+
+    state_interfaces: 
+      - position
+      - velocity
+
+    open_loop_control: true
+    allow_integration_in_goal_trajectories: true
+
+
+gripper_controller:
+  ros__parameters:
+    joints:
+      - joint_4 # no need to mention joint_5 as it will mimic joint_4
+     
+
+    interface_name: position
+
+    # command_interfaces:
+    #   - position
+    
+    # state_interfaces:
+    #   - position
+
+    # open_loop_control: true
+    # allow_integration_in_goal_trajectories: true
