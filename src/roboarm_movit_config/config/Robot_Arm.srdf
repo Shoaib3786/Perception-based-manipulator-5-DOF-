@@ -15,6 +15,7 @@
         <joint name="joint_2"/>
         <joint name="joint_3"/>
         <joint name="joint_4"/>
+        <joint name="joint_prism"/>
         <joint name="nuckles_joint"/>
     </group>
     <group name="gripper">
@@ -23,45 +24,57 @@
     </group>
     <!--GROUP STATES: Purpose: Define a named state for a particular group, in terms of joint values. This is useful to define states like 'folded arms'-->
     <group_state name="home" group="arm">
-        <joint name="joint_1" value="-0.1128"/>
-        <joint name="joint_2" value="0.0087"/>
+        <joint name="joint_1" value="0.8157"/>
+        <joint name="joint_2" value="0.0955"/>
         <joint name="joint_3" value="1.5707"/>
         <joint name="joint_4" value="0"/>
+        <joint name="joint_prism" value="0.3757"/>
     </group_state>
     <group_state name="home2" group="arm">
-        <joint name="joint_1" value="0"/>
-        <joint name="joint_2" value="0"/>
-        <joint name="joint_3" value="0"/>
-        <joint name="joint_4" value="0"/>
+        <joint name="joint_1" value="2.2737"/>
+        <joint name="joint_2" value="-1.2236"/>
+        <joint name="joint_3" value="1.3277"/>
+        <joint name="joint_4" value="1.1194"/>
+        <joint name="joint_prism" value="0.1796"/>
     </group_state>
     <group_state name="home3" group="arm">
-        <joint name="joint_1" value="-1.5707"/>
-        <joint name="joint_2" value="-0.026"/>
-        <joint name="joint_3" value="-0.3731"/>
-        <joint name="joint_4" value="1.5707"/>
+        <joint name="joint_1" value="-0.5033"/>
+        <joint name="joint_2" value="0.5467"/>
+        <joint name="joint_3" value="-1.05"/>
+        <joint name="joint_4" value="0.4079"/>
+        <joint name="joint_prism" value="0.3204"/>
     </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
-    <end_effector name="gripper" parent_link="claw_link-l5" group="gripper"/>
+    <end_effector name="gripper" parent_link="claw_link" group="gripper"/>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
-    <disable_collisions link1="arm_link-l3" link2="biceps_link-l2" reason="Adjacent"/>
-    <disable_collisions link1="arm_link-l3" link2="claw_link-l5" reason="Never"/>
-    <disable_collisions link1="arm_link-l3" link2="gripper_left" reason="Never"/>
-    <disable_collisions link1="arm_link-l3" link2="gripper_right" reason="Never"/>
-    <disable_collisions link1="arm_link-l3" link2="palm_link-l4" reason="Adjacent"/>
+    <disable_collisions link1="arm_link" link2="biceps_link" reason="Adjacent"/>
+    <disable_collisions link1="arm_link" link2="claw_link" reason="Never"/>
+    <disable_collisions link1="arm_link" link2="gripper_left" reason="Never"/>
+    <disable_collisions link1="arm_link" link2="gripper_right" reason="Never"/>
+    <disable_collisions link1="arm_link" link2="prismatic_link" reason="Never"/>
+    <disable_collisions link1="arm_link" link2="wrist_link" reason="Adjacent"/>
     <disable_collisions link1="base_link" link2="base_plate" reason="Adjacent"/>
+    <disable_collisions link1="base_link" link2="biceps_link" reason="Never"/>
+    <disable_collisions link1="base_link" link2="claw_link" reason="Never"/>
     <disable_collisions link1="base_link" link2="gripper_left" reason="Never"/>
     <disable_collisions link1="base_link" link2="gripper_right" reason="Never"/>
-    <disable_collisions link1="base_plate" link2="biceps_link-l2" reason="Adjacent"/>
-    <disable_collisions link1="base_plate" link2="claw_link-l5" reason="Never"/>
+    <disable_collisions link1="base_plate" link2="biceps_link" reason="Adjacent"/>
+    <disable_collisions link1="base_plate" link2="claw_link" reason="Never"/>
     <disable_collisions link1="base_plate" link2="gripper_left" reason="Never"/>
     <disable_collisions link1="base_plate" link2="gripper_right" reason="Never"/>
-    <disable_collisions link1="biceps_link-l2" link2="claw_link-l5" reason="Never"/>
-    <disable_collisions link1="biceps_link-l2" link2="gripper_left" reason="Never"/>
-    <disable_collisions link1="biceps_link-l2" link2="gripper_right" reason="Never"/>
-    <disable_collisions link1="claw_link-l5" link2="gripper_left" reason="Adjacent"/>
-    <disable_collisions link1="claw_link-l5" link2="gripper_right" reason="Adjacent"/>
-    <disable_collisions link1="claw_link-l5" link2="palm_link-l4" reason="Adjacent"/>
+    <disable_collisions link1="base_plate" link2="wrist_link" reason="Never"/>
+    <disable_collisions link1="biceps_link" link2="claw_link" reason="Never"/>
+    <disable_collisions link1="biceps_link" link2="gripper_left" reason="Never"/>
+    <disable_collisions link1="biceps_link" link2="gripper_right" reason="Never"/>
+    <disable_collisions link1="biceps_link" link2="prismatic_link" reason="Never"/>
+    <disable_collisions link1="claw_link" link2="gripper_left" reason="Adjacent"/>
+    <disable_collisions link1="claw_link" link2="gripper_right" reason="Adjacent"/>
+    <disable_collisions link1="claw_link" link2="prismatic_link" reason="Adjacent"/>
+    <disable_collisions link1="claw_link" link2="wrist_link" reason="Never"/>
     <disable_collisions link1="gripper_left" link2="gripper_right" reason="Default"/>
-    <disable_collisions link1="gripper_left" link2="palm_link-l4" reason="Never"/>
-    <disable_collisions link1="gripper_right" link2="palm_link-l4" reason="Never"/>
+    <disable_collisions link1="gripper_left" link2="prismatic_link" reason="Never"/>
+    <disable_collisions link1="gripper_left" link2="wrist_link" reason="Never"/>
+    <disable_collisions link1="gripper_right" link2="prismatic_link" reason="Never"/>
+    <disable_collisions link1="gripper_right" link2="wrist_link" reason="Never"/>
+    <disable_collisions link1="prismatic_link" link2="wrist_link" reason="Adjacent"/>
 </robot>

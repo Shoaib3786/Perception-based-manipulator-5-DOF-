@@ -43,7 +43,7 @@
         </collision>
     </link>
 
-    <joint name="joint-1" type="revolute"> 
+    <joint name="joint_1" type="revolute"> 
         <parent link="base_link"/>
         <child link="base_plate"/>
         <axis xyz="0 0 1"/> 
