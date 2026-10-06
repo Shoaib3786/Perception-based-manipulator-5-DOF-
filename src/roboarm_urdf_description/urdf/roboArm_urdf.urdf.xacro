@@ -3,15 +3,17 @@
 
     <xacro:arg name="use_gazebo" default="true"/>
 
-    <xacro:if value="$(arg use_gazebo)">
+    <!-- <xacro:if value="$(arg use_gazebo)">
         <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_gazebo.xacro"/>
         <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_ros2_control.xacro"/>
-    </xacro:if>    
+    </xacro:if>     -->
 
     <!-- xacro:property is also variable - but for local use not like xacro:arg -->
     <xacro:property name="PI" value="3.141592653589793"/>
     <xacro:property name="effort" value="3.0"/>
     <xacro:property name="velocity" value="5.0"/>
+    <!-- Size of square 'camera' box -->
+    <xacro:property name="camera_link" value="0.1" />
 
     <!-- inertial matrix for Gazebo simulation for each link hence here as global varibale -->
     <xacro:macro name="default_inertial_matrix" params="mass">
@@ -24,7 +26,9 @@
         </inertial>
     </xacro:macro>
 
-    <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_urdf_descript.urdf.xacro"/>
+    <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_description.urdf.xacro"/>
+    <xacro:include filename="$(find roboarm_urdf_description)/urdf/sensors_description.urdf.xacro"/>
 
-     
+
+
 </robot> 

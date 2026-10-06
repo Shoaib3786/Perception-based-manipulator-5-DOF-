@@ -31,12 +31,13 @@ def generate_launch_description():
     --> COULD LOOK LIKE THIS: ros2 launch my_pkg my_launch.py model:=/path/to/other_robot.urdf.xacro
     """
     model_arg = DeclareLaunchArgument(
-    name="model",    # varaible/argument name used for overwritting CLI command           
-    default_value=os.path.join(robot_description_dir, "urdf", "roboArm_urdf.urdf.xacro"),
-    description="Absolute path to the URDF file"
+        name="model",    # varaible/argument name used for overwritting CLI command           
+        default_value=os.path.join(robot_description_dir, "urdf", "roboArm_urdf.urdf.xacro"),
+        description="Absolute path to the URDF file"
     )
+    model = LaunchConfiguration("model") # making above path into python variable
 
-
+    
     """
     # LaunchConfiguration() it takes the CLI varaible created by DeclareLaunchArgument --> that is, it takes the path of xacro file and convert to urdf
     --> COULD LOOK LIKE THIS: ros2 xacro xacro /path/to/roboArm.urdf.xacro
@@ -45,7 +46,7 @@ def generate_launch_description():
         # command() - run shell commands at launch, xacro is the shell command that need xacro file to convert into urdf xml string this is given as OUTPUT
         Command(["xacro ", LaunchConfiguration("model")]), # LaunchConfiguration() it is used to access the CLI varaible created by DeclareLaunchArgument --> that is, it takes the path of xacro file.
         value_type=str
-        )   #it converts xacro file to pure urdf file
+    )   #it converts xacro file to pure urdf file
 
 
     """
@@ -65,10 +66,10 @@ def generate_launch_description():
     Gazebo looks for the special Environment Variable that has stored the path of resources(in this case robot urdf)
     """
     gazebo_resource_path = SetEnvironmentVariable(
-    name="GZ_SIM_RESOURCE_PATH",
-    value=[
-        str(Path(robot_description_dir).parent.resolve())
-        ]
+        name="GZ_SIM_RESOURCE_PATH",
+        value=[
+                str(Path(robot_description_dir).parent.resolve())
+            ]
     )
 
     # ros_distro= os.environ["ROS_DISTRO"]
@@ -90,14 +91,26 @@ def generate_launch_description():
                 1. The Declarelaunchargument--> which we built for CLI overwriting(say: "model")
                 2. The launch_arguments--> the argument which we pass to another file here that is "gz_args"
     """
+
+
+    """
+    Getting the path of world (this contains plugins for sensor and future world background)
+    """
+    world_arg = DeclareLaunchArgument(
+            name="world",    # varaible/argument name used for overwritting CLI command           
+            default_value=os.path.join(robot_description_dir, "worlds", "perception_world.sdf"),
+            description="Absolute path to the world plugin sdf file"
+        )
+    # Read the launch argument value
+    world = LaunchConfiguration("world")
+    
     gazebo = IncludeLaunchDescription(
         #specify type and directory of the file we want to launch
         PythonLaunchDescriptionSource([  # type of the launch file is python launch file
             os.path.join(get_package_share_directory("ros_gz_sim"), "launch"),  #ros_gz_sim is pre-installed ros2 packages just like robot_state_publisher
             "/gz_sim.launch.py"]),
-        launch_arguments=[
-        ("gz_args", [" -v 4 -r empty.sdf"])     # empty gazebo world
-        ]
+        
+        launch_arguments={"gz_args": ["-v 4 -r ",world]}.items()
     )
 
 
@@ -123,16 +136,28 @@ def generate_launch_description():
         rosgraph_msgs/msg/Clock --> ROS message type
         gz.msgs.Clock --> GAZEBO message type
     """
+    ros_bridge_config_file_path=os.path.join(robot_description_dir, 'config', 'ros_gz_bridge_config.yaml')
+    config_file_arg = DeclareLaunchArgument(
+        name="ros_bridge_config_file",
+        default_value=ros_bridge_config_file_path # this path consist of sensor communication
+    )
     gz_ros2_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
         arguments=[
             "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock]"
-            ]
+            ],
+        parameters=[{
+            'bridge_name': "mysensors_bridge",
+            'config_file': LaunchConfiguration('ros_bridge_config_file')
+            }]
     )
+            
 
     return LaunchDescription([
         model_arg,
+        world_arg,
+        config_file_arg,
         gazebo_resource_path,
         robot_state_publisher,
         gazebo,

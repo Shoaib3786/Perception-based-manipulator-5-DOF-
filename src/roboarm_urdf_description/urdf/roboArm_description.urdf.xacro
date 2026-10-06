@@ -173,7 +173,7 @@
     <joint name="nuckles_joint" type="fixed">
         <parent link="prismatic_link"/>
         <child link="claw_link"/> 
-        <origin rpy="0 0 0" xyz="-0.125 1.01 0"/>
+        <origin rpy="0 0 0" xyz="-0.124 1.01 0"/>
     </joint>
 
     <!-- finger-->
