@@ -98,7 +98,7 @@ def generate_launch_description():
     """
     world_arg = DeclareLaunchArgument(
             name="world",    # varaible/argument name used for overwritting CLI command           
-            default_value=os.path.join(robot_description_dir, "worlds", "perception_world.sdf"),
+            default_value=os.path.join(robot_description_dir, "worlds", "perception_world2.sdf"),
             description="Absolute path to the world plugin sdf file"
         )
     # Read the launch argument value
@@ -123,7 +123,8 @@ def generate_launch_description():
         executable="create",
         output="screen",
         arguments=["-topic", "robot_description",
-                   "-name", "roboArm"]
+                   "-name", "roboArm",
+                   "-z", "0.79"]
     )
 
     """
@@ -145,7 +146,7 @@ def generate_launch_description():
         package="ros_gz_bridge",
         executable="parameter_bridge",
         arguments=[
-            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock]"
+            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
             ],
         parameters=[{
             'bridge_name': "mysensors_bridge",

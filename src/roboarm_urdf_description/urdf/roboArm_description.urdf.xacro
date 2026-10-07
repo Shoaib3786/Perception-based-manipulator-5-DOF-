@@ -4,7 +4,9 @@
 
     <!-- base link of the robotarm -->
     <link name="base_link">    
-        <xacro:default_inertial_matrix mass="1.0"/>
+        <xacro:box_inertial
+            mass="1.0" sx="0.5" sy="0.5" sz="0.34"
+            xyz="0 0 0.175" rpy="0 0 0"/>
         <visual>
            <origin rpy="0 0 0" xyz= "0 0 .175"/>
             <geometry>
@@ -27,7 +29,9 @@
     </joint>
 
     <link name="base_plate">   
-        <xacro:default_inertial_matrix mass="0.1"/> 
+        <xacro:box_inertial
+            mass="1.0" sx="0.12" sy="0.12" sz="0.35"
+            xyz="0 0 0.176" rpy="0 0 0"/> 
         <visual>
             <origin rpy="0 0 0" xyz="0 0 0.176"/>
             <geometry>
@@ -48,11 +52,14 @@
         <child link="base_plate"/>
         <axis xyz="0 0 1"/> 
         <origin rpy="0 0 0" xyz="0.0 0.0 0.35"/>
-        <limit lower="-${PI}" upper="${PI}" effort="${effort}" velocity="${velocity}"/>
+        <limit lower="-${PI}" upper="${PI}" effort="${joint_1_effort}" velocity="${velocity}"/>
     </joint>
 
     <link name="biceps_link"> 
-        <xacro:default_inertial_matrix mass="0.1"/>
+        <xacro:box_inertial
+            mass="1.0" sx="1.0" sy="0.2" sz="0.2"
+            xyz="0.1 0 0.5" rpy="0 -${PI/2} ${PI/2}"/>
+
         <visual>
             <origin rpy="0 -${PI/2} ${PI/2}" xyz="0.1 0.0 0.5"/>
             <geometry>
@@ -73,11 +80,13 @@
         <child link="biceps_link"/>
         <axis xyz="1 0 0"/> 
         <origin rpy="0 0 0" xyz="0.08 0.0 0.20"/>
-        <limit lower="-${PI/2}" upper="${PI/2}" effort="${effort}" velocity="${velocity}"/>
+        <limit lower="-${PI/2}" upper="${PI/2}" effort="${joint_2_effort}" velocity="${velocity}"/>
     </joint>
 
     <link name="arm_link">
-        <xacro:default_inertial_matrix mass="0.1"/>
+        <xacro:box_inertial
+            mass="1.0" sx="1.0" sy="0.2" sz="0.2"
+            xyz="-0.101 0.5 0" rpy="${PI/2} 0 ${PI/2}"/>
         <visual>
             <origin rpy="${PI/2} 0 ${PI/2}" xyz="-0.101 0.5 0" />
             <geometry>
@@ -97,11 +106,13 @@
         <child link="arm_link"/>
         <axis xyz="1 0 0"/>
         <origin rpy="0 0 0" xyz="0 0 0.89"/>
-        <limit lower="-${PI/2}" upper="${PI/2}" effort="${effort}" velocity="${velocity}"/>
+        <limit lower="-${PI/2}" upper="${PI/2}" effort="${joint_3_effort}" velocity="${velocity}"/>
     </joint>
 
     <link name="wrist_link">  
-        <xacro:default_inertial_matrix mass="0.1"/>
+        <xacro:box_inertial
+            mass="1.0" sx="1.0" sy="0.2" sz="0.2"
+            xyz="0.101 0.5 0" rpy="${PI/2} 0 ${PI/2}"/>
         <visual>
             <origin rpy="${PI/2} 0 ${PI/2}" xyz="0.101 0.5 0" />
             <geometry>
@@ -121,11 +132,14 @@
         <child link="wrist_link"/>
         <axis xyz="1 0 0"/>
         <origin rpy="0 0 0" xyz="0 0.6 0"/>
-        <limit lower="-${PI/2}" upper="${PI/2}" effort="${effort}" velocity="${velocity}"/>
+        <limit lower="-${PI/2}" upper="${PI/2}" effort="${joint_4_effort}" velocity="${velocity}"/>
     </joint>
 
     <link name="prismatic_link">  
-        <xacro:default_inertial_matrix mass="0.05"/>
+        <xacro:box_inertial
+            mass="1.0" sx="1.0" sy="0.2" sz="0.2"
+            xyz="-0.11 0.45 0" rpy="${PI/2} 0 ${PI/2}"/>
+
         <visual>
             <origin rpy="${PI/2} 0 ${PI/2}" xyz="-0.11 0.45 0" />
             <geometry>
@@ -147,11 +161,13 @@
         <axis xyz="0 1 0"/>
         <origin rpy="0 0 0" xyz="0 0.5 0"/>
         <limit lower="0.0" upper="0.50"
-           effort="10.0" velocity="0.05"/>
+           effort="${joint_prism_effort}" velocity="0.05"/>
     </joint>
   
     <link name="claw_link">  
-        <xacro:default_inertial_matrix mass="0.05"/>
+        <xacro:box_inertial
+            mass="0.5" sx="0.12" sy="0.25" sz="0.25"
+            xyz="0 0 0" rpy="0 0 ${PI/2}"/>
         <visual>
             <origin rpy="0 0 ${PI/2}" xyz="0 0.0 0.0" />
             <geometry>
@@ -178,7 +194,7 @@
 
     <!-- finger-->
     <link name="gripper_right">  
-        <xacro:default_inertial_matrix mass="0.01"/>
+        <xacro:default_inertial_matrix mass="0.1"/>
         <visual>
             <origin rpy="0 0 -${PI/2}" xyz="-0.1 0.6 0.0"/>
             <geometry>
@@ -196,7 +212,7 @@
     
     <!--finger-->
     <link name="gripper_left">  
-        <xacro:default_inertial_matrix mass="0.01"/>
+        <xacro:default_inertial_matrix mass="0.1"/>
         <visual>
             <origin rpy="0 0 -${PI/2}" xyz="-0.04 0.6 0.0"/>
             <geometry>
@@ -219,7 +235,7 @@
         <child link="gripper_right"/>
         <axis xyz="0 0 1"/>
         <origin rpy="0 0 0" xyz="+0.07 0.13 0.0"/>
-        <limit lower="-${PI/2}" upper="0.0" effort="${effort}" velocity="${velocity}"/>
+        <limit lower="-${PI/2}" upper="0.0" effort="${joint_prism_effort}" velocity="${velocity}"/>
     </joint>
 
     <!-- for gripperLeft_joint -->
@@ -229,7 +245,7 @@
         <axis xyz="0 0 1"/>
         <origin rpy="0 0 0" xyz="-0.09 0.13 0.0"/>
         <mimic joint="joint_5" multiplier="-1"/>  <!-- it mimics the right_gripper but in apposite way due to multiplier -1-->
-        <limit lower="0" upper="${PI/2}" effort="${effort}" velocity="${velocity}"/>
+        <limit lower="0" upper="${PI/2}" effort="${joint_prism_effort}" velocity="${velocity}"/>
     </joint>
 
 </robot> 

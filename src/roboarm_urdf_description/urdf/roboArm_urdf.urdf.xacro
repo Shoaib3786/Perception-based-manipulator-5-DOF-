@@ -9,7 +9,11 @@
 
     <!-- xacro:property is also variable - but for local use not like xacro:arg -->
     <xacro:property name="PI" value="3.141592653589793"/>
-    <xacro:property name="effort" value="3.0"/>
+    <xacro:property name="joint_1_effort" value="20.0"/>
+    <xacro:property name="joint_2_effort" value="120.0"/>
+    <xacro:property name="joint_3_effort" value="120.0"/>
+    <xacro:property name="joint_4_effort" value="70.0"/>
+    <xacro:property name="joint_prism_effort" value="50.0"/>
     <xacro:property name="velocity" value="5.0"/>
     <!-- Size of square 'camera' box -->
     <xacro:property name="camera_link" value="0.1" />
@@ -19,12 +23,27 @@
         <inertial>
             <mass value="${mass}"/>
             <inertia 
-                    ixx="1.0" ixy="0.0" ixz="0.0"
+                    ixx="1.0" ixy="0.0" ixz="0.00"
                     iyy="1.0" iyz="0.0"
                     izz="1.0"/>
         </inertial>
     </xacro:macro>
+    <xacro:macro name="box_inertial"
+                params="mass sx sy sz xyz rpy">
+        <inertial>
+            <origin xyz="${xyz}" rpy="${rpy}"/>
+            <mass value="${mass}"/>
 
+            <inertia
+                ixx="${mass * (sy*sy + sz*sz) / 12.0}"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="${mass * (sx*sx + sz*sz) / 12.0}"
+                iyz="0.0"
+                izz="${mass * (sx*sx + sy*sy) / 12.0}"/>
+        </inertial>
+    </xacro:macro>
+    
     <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_description.urdf.xacro"/>
     <xacro:include filename="$(find roboarm_urdf_description)/urdf/sensors_description.urdf.xacro"/>
 
