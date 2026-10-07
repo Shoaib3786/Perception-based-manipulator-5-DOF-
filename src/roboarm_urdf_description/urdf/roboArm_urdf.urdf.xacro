@@ -3,10 +3,9 @@
 
     <xacro:arg name="use_gazebo" default="true"/>
 
-    <!-- <xacro:if value="$(arg use_gazebo)">
-        <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_gazebo.xacro"/>
-        <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_ros2_control.xacro"/>
-    </xacro:if>     -->
+    <xacro:if value="$(arg use_gazebo)">
+        <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_ros2_control.urdf.xacro"/>
+    </xacro:if>    
 
     <!-- xacro:property is also variable - but for local use not like xacro:arg -->
     <xacro:property name="PI" value="3.141592653589793"/>
@@ -28,7 +27,5 @@
 
     <xacro:include filename="$(find roboarm_urdf_description)/urdf/roboArm_description.urdf.xacro"/>
     <xacro:include filename="$(find roboarm_urdf_description)/urdf/sensors_description.urdf.xacro"/>
-
-
 
 </robot> 

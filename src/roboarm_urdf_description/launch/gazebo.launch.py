@@ -152,6 +152,31 @@ def generate_launch_description():
             'config_file': LaunchConfiguration('ros_bridge_config_file')
             }]
     )
+
+
+    """
+    Activate controller
+    """
+    joint_state_broadcaster_spawner=Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+        "joint_state_broadcaster",
+        "--controller-manager",
+        "/controller_manager"
+        ],
+        output="screen"
+    )
+    joint_trajectory_controller_spawner=Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+        "joint_trajectory_controller",
+        "--controller-manager",
+        "/controller_manager"
+        ],
+        output="screen"
+    )
             
 
     return LaunchDescription([
@@ -159,8 +184,10 @@ def generate_launch_description():
         world_arg,
         config_file_arg,
         gazebo_resource_path,
-        robot_state_publisher,
         gazebo,
+        robot_state_publisher,
         gz_spawn_entity,
-        gz_ros2_bridge
-    ])
+        joint_state_broadcaster_spawner,
+        joint_trajectory_controller_spawner,
+        gz_ros2_bridge,
+    ])  
