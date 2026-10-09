@@ -31,6 +31,7 @@
     <xacro:macro name="box_inertial"
                 params="mass sx sy sz xyz rpy">
         <inertial>
+            <!-- giving the inertia frame the geometrical position & orientation becuase its important for the inertia frame to align with object's frame location & rotation -->
             <origin xyz="${xyz}" rpy="${rpy}"/>
             <mass value="${mass}"/>
 

@@ -26,12 +26,14 @@ def generate_launch_description():
     robot_state_publisher = Node(  #robot_state_publisher is the inbuilt package for being node by ros2 to get the access of the state of the robot and publishes its content to TF topic which handles the transformation of frames of robot for forward/inverse kinematics
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        parameters=[{"robot_description": robot_description}]      # robot_description is exact paramter name robot_state_publisher requires for passing the robot urdf
+        parameters=[{"robot_description": robot_description,
+                     "use_sim_time": False}]      # robot_description is exact paramter name robot_state_publisher requires for passing the robot urdf
     )
 
     joint_state_publisher_gui = Node( # gui -- for providing slider that gives values to the joints that is used for testing the joint movement in rviz
         package="joint_state_publisher_gui",
         executable="joint_state_publisher_gui"
+        # parameters=[{"use_sim_time": True}]
     )
 
     rviz_node = Node(

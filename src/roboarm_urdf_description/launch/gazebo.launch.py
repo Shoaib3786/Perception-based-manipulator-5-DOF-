@@ -110,11 +110,11 @@ def generate_launch_description():
             os.path.join(get_package_share_directory("ros_gz_sim"), "launch"),  #ros_gz_sim is pre-installed ros2 packages just like robot_state_publisher
             "/gz_sim.launch.py"]),
         
-        launch_arguments={"gz_args": ["-v 4 -r ",world]}.items()
+        launch_arguments={"gz_args": ["-v 4 -r ", world]}.items()
     )
 
 
-    """
+    """ 
     1. It spawns the robot in Gazebo simulation env on topic "/robot_description" and names the robot using "-name"
     2. Spawn cann't read URDF file directly instead it reads parameter robot_description(as argument flag -topic) hence uses global parameter created by robot_state_publisher
     """
@@ -142,16 +142,14 @@ def generate_launch_description():
         name="ros_bridge_config_file",
         default_value=ros_bridge_config_file_path # this path consist of sensor communication
     )
+    
     gz_ros2_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        arguments=[
-            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
-            ],
         parameters=[{
-            'bridge_name': "mysensors_bridge",
-            'config_file': LaunchConfiguration('ros_bridge_config_file')
-            }]
+            "config_file": LaunchConfiguration("ros_bridge_config_file")
+        }],
+        output="screen",
     )
 
 
@@ -178,6 +176,16 @@ def generate_launch_description():
         ],
         output="screen"
     )
+
+    gripper_controller_spawner = Node(
+    package="controller_manager",
+    executable="spawner",
+    arguments=[
+        "gripper_controller",
+        "--controller-manager", "/controller_manager",
+    ],
+    output="screen",
+    )
             
 
     return LaunchDescription([
@@ -189,6 +197,7 @@ def generate_launch_description():
         robot_state_publisher,
         gz_spawn_entity,
         joint_state_broadcaster_spawner,
+        gripper_controller_spawner,
         joint_trajectory_controller_spawner,
         gz_ros2_bridge,
     ])  
