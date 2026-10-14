@@ -132,7 +132,7 @@
         <child link="wrist_link"/>
         <axis xyz="1 0 0"/>
         <origin rpy="0 0 0" xyz="0 0.6 0"/>
-        <limit lower="-${PI/2}" upper="${PI/2}" effort="${joint_4_effort}" velocity="${velocity}"/>
+        <limit lower="-${PI}" upper="${PI}" effort="${joint_4_effort}" velocity="${velocity}"/>
     </joint>
 
     <link name="prismatic_link">  

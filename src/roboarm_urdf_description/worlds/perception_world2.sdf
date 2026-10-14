@@ -234,7 +234,7 @@
     <!-- ========================= -->
 
     <model name="red_cube">
-      <pose>2.2 -0.5 1.18 0 0 0</pose>
+      <pose>2.6 0.0 1.18 0 0 0</pose>
 
       <link name="cube_link">
         <inertial>
@@ -273,7 +273,7 @@
     </model>
 
     <model name="pink_cube">
-      <pose>3.2 1.2 1.18 0 0 0</pose>
+      <pose>3.0 0.5 1.18 0 0 0</pose>
 
       <link name="cube2_link">
         <inertial>
@@ -312,7 +312,7 @@
     </model>
 
     <model name="green_cube">
-      <pose>2.6 -1.5 1.18 0 0 0</pose>
+      <pose>2.6 -1.0 1.18 0 0 0</pose>
 
       <link name="cube3_link">
         <inertial>
