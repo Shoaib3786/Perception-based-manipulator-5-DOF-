@@ -21,7 +21,7 @@ import rclpy
 from cv_bridge import CvBridge, CvBridgeError
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data # use according to the ros2_gz_bridge config file you created
 from sensor_msgs.msg import Image
 
 
@@ -41,6 +41,7 @@ class SegmentationNode(Node):
         self.stop_requested = False
         self.windows_created = False
         self.last_log_time = None
+        self.segment_info = {}
 
         self.display_subscriber = self.create_subscription(
             Image,
@@ -121,8 +122,9 @@ class SegmentationNode(Node):
 
         return detections
 
+
     @staticmethod
-    def create_output_images(cv_image, detections):
+    def create_output_images(cv_image, detections, header):
         """Build a binary mask and an annotated color image on black."""
         accepted_mask = np.zeros(cv_image.shape[:2], dtype=np.uint8)
         for detection in detections:
@@ -142,9 +144,10 @@ class SegmentationNode(Node):
                           (255, 255, 255), 1)
             cv2.circle(result, center, 6, (0, 0, 0), -1)
             cv2.circle(result, center, 4, (255, 255, 255), -1)
-
+            timestamp=((header.stamp.sec) + (header.stamp.nanosec*0.000000001))
             label = (f"{detection['name']} "
-                     f"u={u_center:.1f}, v={v_center:.1f}")
+                     f"u={u_center:.1f}, v={v_center:.1f}"
+                     f"timestamp={timestamp}")
             font = cv2.FONT_HERSHEY_SIMPLEX
             scale = 0.45
             text_width = cv2.getTextSize(label, font, scale, 1)[0][0]
@@ -190,10 +193,26 @@ class SegmentationNode(Node):
         color_masks = self.create_color_masks(hsv_image)
         self.detections = self.extract_detections(color_masks)
         self.image_header = msg.header
-        accepted_mask, result = self.create_output_images(
-            cv_image, self.detections
-        )
 
+        """
+        publish the content for depth
+        """
+
+        
+        #draw the detections
+        accepted_mask, result = self.create_output_images(cv_image, self.detections, self.image_header)
+
+
+        # """
+        # Publish this content
+        # """
+        # self.segment_info={
+        #     "detection": self.detections,
+        #     "image_header": self.image_header,
+        #     "timestamp": (self.image_header.stamp.sec) + (self.image_header.stamp.nanosec*0.000000001)
+        # }
+
+        
         if not self.windows_created:
             for name in ['1 - Original image', '2 - Accepted binary mask',
                          '3 - Objects and pixel coordinates']:
@@ -211,6 +230,9 @@ class SegmentationNode(Node):
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             self.stop_requested = True
+
+    def publish_detection():
+        pass
 
 def main(args=None):
     rclpy.init(args=args)
