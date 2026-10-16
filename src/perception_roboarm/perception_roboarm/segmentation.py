@@ -23,6 +23,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data # use according to the ros2_gz_bridge config file you created
 from sensor_msgs.msg import Image
+from perception_interfaces.msg import Segment2D, Segmentation2D
 
 
 class SegmentationNode(Node):
@@ -47,6 +48,12 @@ class SegmentationNode(Node):
             Image,
             self.image_topic,
             self.image_callback,
+            qos_profile_sensor_data
+        )
+
+        self.segmentation_publisher = self.create_publisher(
+            Segmentation2D,
+            '/perception/segmentation_2d',
             qos_profile_sensor_data
         )
 
@@ -110,15 +117,17 @@ class SegmentationNode(Node):
                     continue
 
                 region_number += 1
-                detections.append({
-                    'name': f'{color_name}#{region_number}',
+                detections.append(
+                    {
+                    'name': f'{color_name} - #{region_number}',
                     'color': color_name,
                     'centroid_px': (float(u.mean()), float(v.mean())),
                     'pixels_uv': np.column_stack((u, v)),
                     'pixel_count': int(u.size),
                     'bbox_xywh': cv2.boundingRect(contour),
                     'mask': object_mask,
-                })
+                    }
+                )
 
         return detections
 
@@ -196,21 +205,15 @@ class SegmentationNode(Node):
 
         """
         publish the content for depth
+        1. Convert the data into transportable content on ROS2 topic.
+            1. Mask from cv2_to_ros2msg
+            2. Rest of the dictionary items in their the specified type. 
+        2. then Publish it 
         """
+        self.publish_detections(self.detections, msg.header)
 
-        
         #draw the detections
         accepted_mask, result = self.create_output_images(cv_image, self.detections, self.image_header)
-
-
-        # """
-        # Publish this content
-        # """
-        # self.segment_info={
-        #     "detection": self.detections,
-        #     "image_header": self.image_header,
-        #     "timestamp": (self.image_header.stamp.sec) + (self.image_header.stamp.nanosec*0.000000001)
-        # }
 
         
         if not self.windows_created:
@@ -231,8 +234,38 @@ class SegmentationNode(Node):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             self.stop_requested = True
 
-    def publish_detection():
-        pass
+    def publish_detections(self, detections, header):
+        """Convert local detection dictionaries into a ROS message."""
+        output = Segmentation2D()
+        output.header = header
+
+        for detection in detections:
+            region = Segment2D()
+
+            region.name = detection['name']
+            region.color = detection['color']
+
+            u, v = detection['centroid_px']
+            region.centroid_u = float(u)
+            region.centroid_v = float(v)
+
+            region.bbox_xywh = [
+                int(value) for value in detection['bbox_xywh']
+            ]
+            region.pixel_count = int(detection['pixel_count'])
+
+            # Convert the NumPy mask into a ROS Image message.
+            region.mask = self.bridge.cv2_to_imgmsg(
+                detection['mask'],
+                encoding='mono8'
+            ) 
+            region.mask.header = header
+
+            output.detections.append(region)
+
+        # Publish even when detections is empty:
+        # the receiver should know this frame contained no accepted objects.
+        self.segmentation_publisher.publish(output)
 
 def main(args=None):
     rclpy.init(args=args)
