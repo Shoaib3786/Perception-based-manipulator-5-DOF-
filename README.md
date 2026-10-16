@@ -90,4 +90,19 @@ Now to fulfill the aim of the project is to get 3d coordinates of the object usi
             - Total pixel count in each regions/in each boxes — helpful in 3D reconstruction of the object.  
             - Gets Visual centroid (2D), not the geometrical centroid of the cube.  
             - Not just pixel count but also pixel locations (u,v) of each pixels within the object/region.  
-            - Each object’s/boxe’s color object_mask.  
+            - Each object’s/boxe’s color object_mask.
+            
+**3. Depth Detection:**
+  - Use the extracted detection information from the above stage and publish it on the topic to deal with depth.
+  - For publishing the extracted detected content on the topic it would required the message type, so to make the message type to publish our the detected content we need to create a custom message type, so create the ros2 package for it specifically.
+  - Then, for depth detection and getting the X,Y,Z real world 3D coordinates we use the segmentation results and combine it with equivalent depth image(same timestamp as that of color image used for segmenting the object u,v pixel coordinate).
+    - In the Depth_detection we needed three subscribers:
+      - Camera Calibration_subscriber that fetches camera parameters like_fx,fy,cx,cy so used simple seperate callback for it.
+      - Depth_detection_subscriber and Segementation_results_subscriber these two subscribers needs to have have same callback (we use TimeSynchronised callback) for these two subscriber because we needs these two to have same typestamp segmentation result + depth point cloud.
+
+**4. Motion Planning:**
+Now w'll use the X,Y,Z coordinates from the point cloud of the objects and then make the robot use moveIt2 to pan and execute the path.
+  - For testing w'll send one red block 3D X,Y,Z coordinates.
+  - And then convert it into robot's planning/base frame using TF2 transformation.
+  - And then send it to the moveit2.
+  - 
