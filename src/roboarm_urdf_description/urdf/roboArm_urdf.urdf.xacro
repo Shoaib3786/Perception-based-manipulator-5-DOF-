@@ -12,7 +12,7 @@
     <xacro:property name="joint_1_effort" value="20.0"/>
     <xacro:property name="joint_2_effort" value="120.0"/>
     <xacro:property name="joint_3_effort" value="120.0"/>
-    <xacro:property name="joint_4_effort" value="70.0"/>
+    <xacro:property name="joint_4_effort" value="70.0"/>    
     <xacro:property name="joint_prism_effort" value="50.0"/>
     <xacro:property name="velocity" value="5.0"/>
     <!-- Size of square 'camera' box -->
