@@ -105,4 +105,3 @@ Now w'll use the X,Y,Z coordinates from the point cloud of the objects and then 
   - For testing w'll send one red block 3D X,Y,Z coordinates.
   - And then convert it into robot's planning/base frame using TF2 transformation.
   - And then send it to the moveit2.
-  - 
