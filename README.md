@@ -105,3 +105,28 @@ Now w'll use the X,Y,Z coordinates from the point cloud of the objects and then 
   - For testing w'll send one red block 3D X,Y,Z coordinates.
   - And then convert it into robot's planning/base frame using TF2 transformation.
   - And then send it to the moveit2.
+
+
+**5. Using Yolo26n-segmentation model**
+Goal: Add new Object as "apple" in the gazebo simulation for pick-place operation, the task includes training Yolo26n-seg model for classifying apples in the scene.
+
+Used:
+- YCB Apple dataset which has 3D meshes for spawning it as an object in the Gazebo simulation. The dataset also includes mask as annotation for the apples in the image.
+
+Training:
+- Used Ultralytic YOLO26n-seg model and needed appropriate dataset file structure for supplying it for training.
+- The YCB dataset provides mask as .pmb file being an image of having white as background and black being the detected object.
+- Since Ultralytics supports format as Image,Labels.txt file consisting of classID & bounding coordinates and dataset.config file consisting of train test dataset path along with classID descriptions. So we need to convert our mask.pmb file to label.txt file for each images.
+
+Drawback:
+- After training the model we came across the situation where our model perform segmentation precisely to the only kind of apples YCB provides, new kinds of apples with more textures are being ignored by the model.
+- Also the model detects FP to the pink block on the table which are not apples in the simulation.
+
+Reasoning:
+- Model have been unaware about more variants of apple with more close and precise texture apple's images.
+- Along with that the YCB dataset provides constant background.
+- My trained model is unaware about no apple case, it just learns about apple being in the scene, so need to add such dataset as well.
+
+Repairing Approach:
+- Planning to borrow apples dataset from COCO dataset, and try to finetune my existing trained model. so to provide new and different apple images examples with varying background.
+- Since we used YCB dataset because we needed 3D meshes of the apples for spawning the apples as another object in the Gazebo simulation so it remains unaffected with this repairing approach.
