@@ -1,10 +1,10 @@
 # Camera / XYZ to MoveIt in Gazebo
 
-Built against repository snapshot c15d6e3. This package reuses the Setup Assistant's
+This package reuses the Setup Assistant's
 SRDF and planning configuration. It overrides the controller mapping, uses the
 Gazebo robot description directly, and enables KDL position-only IK. It does not
 start Gazebo, a second controller manager, mock hardware, or another robot-state
-publisher. Original packages are not modified.
+publisher. See the root README for the complete workspace setup.
 
 ## Scope and prerequisites
 
@@ -42,8 +42,7 @@ source install/setup.bash
 ```
 
 The skip keys are your existing workspace packages, built by colcon below.
-In the old perception manifest, `cv2` should be the rosdep key `python3-opencv`,
-not `cv2`, if you run rosdep over the entire workspace.
+The perception manifest uses `python3-opencv` for the OpenCV dependency.
 
 ## Run with a point cloud
 
@@ -56,8 +55,8 @@ ros2 run perception_roboarm depth_node
 ros2 launch roboarm_motion gazebo_moveit.launch.py cloud_topic:=/perception/red/points approach_height:=0.20
 ```
 
-Do not launch `demo.launch.py` simultaneously. The launch above starts move_group,
-RViz, and approach_node. To keep an existing RViz use `rviz:=false`.
+Do not launch `demo.launch.py` simultaneously. The launch above starts move_group and approach_node. RViz is disabled by default;
+add `rviz:=true` to start it.
 
 1. In RViz use Fixed Frame `base_link`, group `arm`, and the MotionPlanning display.
 2. Add a Marker display on `/approach_node/target_marker` (transient-local durability).

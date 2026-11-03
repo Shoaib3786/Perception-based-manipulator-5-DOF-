@@ -1,132 +1,239 @@
-# Perception-based-manipulator-5-DOF
-### **Stage-1 Building 5R-Manipulator:**  
-**1. Robot description URDF building:**
-  - Learned about frames, joints, links collision, Inertial tags.  
-  - Build gazebo and rviz launch files.  
-  - Installed moveit config package to move my robot using assistant manager.  
-  - Created rviz and gazebo launch files for spawning and testing the robot.  
-  - **ISSUE:** Robot falls down in the gazebo simulation while base link stays static on the ground.  
-  - **SOLUTION**: The viable reason for this is absence of ros2_control setup in my URDF, because of which gazebo views the joints as hinges/passive joints instead of motors/active joints.
+# Perception-based 5-DOF Manipulator
 
-**2. ros2_control setup:**  
-  - Make 2 new files  
-  - **roboArm_ros2_control.urdf.xacro** file —> for providing controllers hardware interface (command and state interface) to each structural joints(Grippers not included YET) with in ros2_control tag.  
-  - **roboArm_gazebo.urdf.xacro** file —> for adding gazeboSim plugin  
-  - Add config/controllers.yaml file —> which consist of selected controllers like joint_state_broadcaster, JTC.  
-  - In order to activate these two controller, start the controllers as a node so write it inside the gazebo launch file itself.  
-  - This **RESOLVED THE ISSUE OF** robot falling down in the gazebo simulation.  
-  - Motion Specific detailing w’ll do it once robot is fully settled up.
+**An ongoing robotics project connecting RGB-D perception to motion planning in ROS 2 and Gazebo.**
 
-**3. Adding rgbd_camera sensor:**   
-Now to fulfill the aim of the project is to get 3d coordinates of the object using object detection hence needed camera module first, therefore adding sensor plugin according to New Gazebo Harmonic method that uses ros_gz_bridge for communication unlike Classical Gazebo that just uses sensor specific gazebo plugins to start using sensors directly.  
-- For adding the rgbd_camera sensor I first need to structure my urdf workspace properly, so:  
-- 5R Manipulator robot description —> written in the separate URDF.  
-- Sensors URDF —> consists of rgbd_camera links, joints, and gazebo/sensor tags.  
-- Perception_world.sdf —> consist of the fundamental plugins that is needed according to the gazebo Harmonic documentation along with rgbd_camera sensor plugin.  
-- ros_gz_bridge config.yaml file —> for proper structuring outputs of the rgbd_camera like Image_raw,camera_info,depth_camera,point-cloud sending from gazebo transport to the ros2 topics, thus needed proper structuring of message transportation instead of multiple CLI based ros_gz_bridge message transportation commands.  
-- **ISSUE**: (To be Resolved later)  
-  - Each links have been given random Inertia Matrix, important to resolve it before performing actual Motion Planning for accurate controller performance.
+I am building this project to understand the complete path from an object appearing in a camera image to a robot moving towards it. I started with a custom arm model and colour-based segmentation, then added depth processing, coordinate transformations and a MoveIt 2 interface. My next focus is learned instance segmentation and, eventually, reliable grasping.
 
-**4. Testing Robot in the gazebo simulation and Camera feed:**
-  - Unlike rviz2 which requires just the new potion to move the robot in the visualization, Gazebo simulation needs the controllers like JTC to perform motion because simulation doesn’t depends on position given by joint_state_publisher_gui. So instead of such stuffs, we have other way around to check how robot moves around in the simulation:  
-    - **Method-1**
-      - Use FollowJointTrajectory action interface CLI command and provide the position, it uses interpolation to produces the motion (Easy to implement just for testing purpose).
-      - **CLI command:**
-      ros2 action send_goal /joint_trajectory_controller/follow_joint_trajectory control_msgs/action/FollowJointTrajectory “{trajectory:{joint_name:[ ],point:[{position:[ ], time_from_start:{ }}]}”  
-    - **Method-2:**
-      - Use Publisher node to publish directly on /joint_trajectory topic, JTC subscribes to this topic automatically to recieves the waypoint/poisition points of each joint to generate trajectory using interpolation just like above.
-      - **CLI command:**
-    ros2 topic pub --once /joint_trajectory_controller/joint_trajectory trajectory_msgs/msg/JointTrajectory “{joint_name:[ ],point:[{position:[ ], time_from_start:{ }}]}”
-    - **Method-3:** Perform via moveIt2 (tedius for just testing purposes)  
-    - **Method 4:** Use you on slider gui  
-- Tested camera feed from rviz2 image  
-  - **ISSUES Found:**  
-    - Unstable motion of the robot once it reaches the sent goal(Gripper not included in this evaluation).  
-    - Camera outputs feed in totally different direction  
-  - **SOLUTION:**
-    - **1. Likely causes for unstable motion is:**  
-      - random assignment of Inertia matrix values for the links which has been assigned with different masses (This issue needs to be resolved now, instead of later implementation).  
-      - So update the masses and inertia matrix for each links thoughtfully.  
-      - For inertial matrix computaion of each elements we must also make sure the inertia frame must align with the object’s frame (location & origin) hence for the specific objects/links visual tag’s origin tag must be copied for inertial tag’s origin tag.
-        - Why? —>  Because link’s frame origin isn’t at the links COM if links visual origin isn’t  0 0 0, if its non zero that means the COM/link’s frame origin of the link is shifted from the actual link(remember the links actual position is dictated by its joint’s origin tag) therefore if the visual tag of link is shifted we must give exact shited location to the inertia origin tag so that inertia origin of the object/link must align with the links origin.
-      - When updating the masses and computing Inertia do also make changes to the efforts for the each joints because if increased masses is made and inertia matrix is also changed accordingly but not changed efforts it will cause the robot to fall down because the efforts are not sufficient enough to hold the links weight thus compute efforts as well.
-      - Effort/torque = m.g.d where d=distance between motor and the COM of link, g=gravity and m=mass of the link.
-      - REMEBER: Effort is computed not just for the urrent link instead it should accommodate all the further links whos COM position and masses is putting influence on the current link’s joint/motor because that motor has to carry the weight of the further links and or additional object mass if its grapped by the gripper.
-      - Also Could include damper it is meant for such unstable motion only(later on) if you want more stability.
-      - **Less probable cause is:** in gazebo simulation the robot is not magically teleported to new goal position upon providing it, it uses velocity command to perform motion v=Kp(x’-x)f, where Kp is position_proportional_gain , so if Kp is too high greater 1 or 2 it will start oscillation/unstability as well, Kp=0.1 is the default value.
-    - **2. Solution for Camera feed:**
-      - Alter the camera joint’s orientation rpy to change the viewing direction of the camera feed, camera joint is of type fixed so altering the axis tag won’t make any difference hence alter origin tag’s rpy value to see the change, because fixed joint doesn’t move thus axis tag won’t influence anything but origin tag which cares about placement of the object initially needs to be altered.
-      - Once you corrected camera view by rotation, the new problem of Gazebo and ROS2 viewing Image frame appears, its the Library issue of Gazebo and ROS2. The issue is Gazebo make camera viewing direction is X-forward, while ROS2 consider Z forward. Thus it is needed to add additional empty link infront fo the camera link name it “corrected_optical_frame” the joint of this link will correct the orientation of the camera frames. So camera_link will capture frames by gazebo (X-forward, Y:left, Z: Up) and then “corrected_optical_link” joint will coreect this to ROS2 acceptable frame orientation (X:right, Y:Down,Z:fwd).
-      - For camera rviz, we need to keep the rviz launch file not to open up because it consist of robot_state_publisher and gui publisher as well, which would use simulation time or not but robot_state_publisher will also be used in gazebo launch file which will create discrepancy. Therefore its needed to open saved rviz.config file instead with simulation time as true from
-        - **CLE command**: *rviz2 -d ~/ros2_projects/roboArm_rosws/src/roboarm_urdf_description/rviz/rviz_config_display.rviz --ros-args -p use_sim_time:=true*
-      - The gripper controlling issue also being resolved since it was behaving loosely during simulation hence add JTC controllers for it as well with the name as gripper_controller and since joint_6 was suppose to mimic joint_5 of the gripper, hence we only included joint_5 into the controller configuration and given it command and state interface while joint_6 is given only the state interface.  
-   
-### **Stage-2 Perception:**  
-**Aim:** Now the goal is to detect the object using segmentation in the image captured by RGB-D camera and get the coordinates of image frame (u,v,Z) and convert it into Point clouds Pi=(X,Y,Z) [each pixels given real world 3d or 6d coordinates]. And then we can use this real world coordinates from point clouds send it to moveIt2 to generate path/trajectory planning.
+The current arm has **four revolute joints and one prismatic joint**, with a separately controlled gripper. This is a simulation and learning project, not a completed autonomous pick-and-place system.
 
-**1. Getting Image/frames from ros2 topic to Opencv:**
-  - Firstly, we can even view the camera feed on rqt_camera_view. It is better instead of seeing the frames in a small block on rviz2. It can be started with the... 
-  **command:** *ros2 run rviz2 rviz2 -d <give the path of rviz2.config file stored in /install folder> --ros2-args -p use_sim_time:=true*
-  - I anyways given this commands writtent in the linux script to avoid writting it every time. along with starting rviz2 using its config instead of using launch file due to 2 robot_state_publisher confliction caused but launch file of rviz(display) and gazebo launch file both uses it and it confuses two different states of the robot and causes disruption in the robot state transformation calculation.  
-  - Now, comming back to perception, Created the new package called Perception_roboarm. And in it created a node that display the frames from the topic which we created in the ros2_gz_bridge config file, so uptil now we were getting gazebo sensor frames sent by gazebo topic and we bridged it send it on ros2 topic which we specified the name of it in the config file and then now in our node we are using simple subscriber node that subscribe the topic to fetch the frame data from the topic and displayed on opencv window but before displaying we need the frames to be converted into opencv acceptable format so we use cv_bridge that converts ros2 format images to cv2 format.  
-  - and gazebo launch file both uses it and it confuses two different states of the robot and causes disruption in the robot state transformation calculation.
+**Stack:** Ubuntu 24.04 · ROS 2 Jazzy · Gazebo Harmonic · Python · OpenCV · NumPy · MoveIt 2 · ros2_control
 
-**2. Perform boxes-detection on 2d image using HSV that classifies the object based on colours:**
-  - We will work upon segmenting the detected object instead of bounding boxes.
-  - Using HSV  —> to detect the object/block based on the colour.
-  - In HSV we perform:  
-    - Use real time feed and add tracker to get the HSV upper and lower values.  
-    - Create a function create_color_mask() it has python wrapper @staticmethod (this wrapper means the method in the class doesn’t need self parameter and hence this method works as helper and doesn’t need object/class instance to use it, so every time you create new instance of the class this method doesn’t become fresh or new to each and every class instance).  
-      - Now — The use of create_color_mask() method:  
-        - It uses the upper and lower values from the tracker we manually figured that out and create a coloured mask, coloured mask here means it just detects the range of number given through upper and lower limit as color values in the camera feed and keep it and make rest of the non similar colours set as black (color values=0 for black).  
-        - And then it returns the dictionary with the name of the color and its associated color mask, the name will help us in the drawing stage to label each boxes accordingly.  
-        - Next, Create a function ls from the detection like (pixel coordinates, object’s visual centroid, pixel count..etc)  
-          - Firstly, it takes the return value from the create_color_mask() that gives dictionary, so w’ll loop each dictionary values which is w’ll iterate each objects by colours.
-          - Then, for current iteration coloured box w’ll capture contour/boundry of the only color box available in the mask which we received.  
-          - Then, w’ll also consider the possibility of what if there is also more than 1 objects of same color, so w’ll create another loop within the above dictionary loop, to loop each boxes of same color get there contour values separately, how to get it? —> w’ll create another numpy array of same size as that of current iteration particular object color mask which we get within the nested loop which we call contour in contours, where contours is the contour os all the boxes available  for that specific colour, while contour is the iteration parameter for each boxes of that colour one by one.
-          - How do we assign same size numpy array? —> by giving np.zero_like(colour_mask) which we get in each iteration of outer loop(loop of dictionary items which we got from create_color_mask() ). And then once we got similar size bumpy array we call it as object_mask, now we have to fill it with values at pixel location u,v for the specific object mask which we get through inner loop(contour in contours), and fill the values by doing bitwise_and(), this will retain only the single object pixel values and rest of the object even if it is of same color as zeros, in the next iteration of (contour in contours )the same color another object will be created object_mask similarly. So this way w’ll have pixel values and pixel location information for each and every object.
-          - Small NOTE in the code we define region as counter, it means the number of objects which w’ll be incrementing in the contour (nested loop).
-          - Now this extract_detections() will return list of items that are considered to be the useful information extraction from the detection:  
-            - Total pixel count in each regions/in each boxes — helpful in 3D reconstruction of the object.  
-            - Gets Visual centroid (2D), not the geometrical centroid of the cube.  
-            - Not just pixel count but also pixel locations (u,v) of each pixels within the object/region.  
-            - Each object’s/boxe’s color object_mask.
-            
-**3. Depth Detection:**
-  - Use the extracted detection information from the above stage and publish it on the topic to deal with depth.
-  - For publishing the extracted detected content on the topic it would required the message type, so to make the message type to publish our the detected content we need to create a custom message type, so create the ros2 package for it specifically.
-  - Then, for depth detection and getting the X,Y,Z real world 3D coordinates we use the segmentation results and combine it with equivalent depth image(same timestamp as that of color image used for segmenting the object u,v pixel coordinate).
-    - In the Depth_detection we needed three subscribers:
-      - Camera Calibration_subscriber that fetches camera parameters like_fx,fy,cx,cy so used simple seperate callback for it.
-      - Depth_detection_subscriber and Segementation_results_subscriber these two subscribers needs to have have same callback (we use TimeSynchronised callback) for these two subscriber because we needs these two to have same typestamp segmentation result + depth point cloud.
+## Where to start
 
-**4. Motion Planning:**
-Now w'll use the X,Y,Z coordinates from the point cloud of the objects and then make the robot use moveIt2 to pan and execute the path.
-  - For testing w'll send one red block 3D X,Y,Z coordinates.
-  - And then convert it into robot's planning/base frame using TF2 transformation.
-  - And then send it to the moveit2.
+- [Current implementation and limitations](#current-status)
+- [Build and launch commands](#build-and-run)
+- [My development workflow](docs/WORKFLOW.md)
+- [Detailed MoveIt interface](src/roboarm_motion/README.md)
+- [Repository maintenance and verification](docs/REPOSITORY_NOTES.md)
 
+## Current status
 
-**5. Using Yolo26n-segmentation model**
-Goal: Add new Object as "apple" in the gazebo simulation for pick-place operation, the task includes training Yolo26n-seg model for classifying apples in the scene.
+| Component | What is available |
+| --- | --- |
+| Robot and simulation | URDF/Xacro model, meshes, RGB-D sensor, table/block worlds, Gazebo and RViz launch files. |
+| Joint control | Gazebo ros2_control integration, joint-state broadcaster, arm trajectory controller and separate gripper trajectory controller. |
+| 2D perception | HSV segmentation of red, pink and green regions; masks, bounding boxes, pixel counts and 2D centroids published through custom ROS messages. |
+| 3D perception | Exact timestamp matching of segmentation and depth, camera-intrinsic back-projection, invalid-depth filtering and colour-specific PointCloud2 outputs. |
+| Motion interface | Capture-time TF transformation and explicit plan/move/cancel services using MoveIt's MoveGroup action. The goal constrains the position of `claw_link`; orientation is free. |
+| Apple segmentation | Initial YOLO segmentation training on YCB apple images is documented in my development notes. Generalisation is still poor. Training scripts, weights, dataset conversion and a YOLO ROS node are not included here yet. |
+| Grasping and evaluation | Still to implement: object orientation/6D pose, grasp selection, a complete pick-and-place sequence, environment collision-scene integration and quantitative evaluation. |
 
-Used:
-- YCB Apple dataset which has 3D meshes for spawning it as an object in the Gazebo simulation. The dataset also includes mask as annotation for the apples in the image.
+The supplied world contains coloured blocks; it does not yet include a packaged YCB apple asset. The launch sequence below runs the **HSV baseline**, not a YOLO apple pipeline.
 
-Training:
-- Used Ultralytic YOLO26n-seg model and needed appropriate dataset file structure for supplying it for training.
-- The YCB dataset provides mask as .pmb file being an image of having white as background and black being the detected object.
-- Since Ultralytics supports format as Image,Labels.txt file consisting of classID & bounding coordinates and dataset.config file consisting of train test dataset path along with classID descriptions. So we need to convert our mask.pmb file to label.txt file for each images.
+## How the pipeline connects
 
-Drawback:
-- After training the model we came across the situation where our model perform segmentation precisely to the only kind of apples YCB provides, new kinds of apples with more textures are being ignored by the model.
-- Also the model detects FP to the pink block on the table which are not apples in the simulation.
+```mermaid
+flowchart TD
+    A[Gazebo RGB-D camera] --> B[ROS image and calibration topics]
+    B --> C[HSV segmentation]
+    B --> D[Depth fusion]
+    C -->|Masks with image timestamp| D
+    D --> E[Colour-specific point clouds]
+    E --> F[Surface mean and capture-time TF]
+    F --> G[Explicit plan or move request]
+    G --> H[MoveIt 2 and OMPL]
+    H --> I[Joint trajectory controller]
+    I --> J[Gazebo arm]
+```
 
-Reasoning:
-- Model have been unaware about more variants of apple with more close and precise texture apple's images.
-- Along with that the YCB dataset provides constant background.
-- My trained model is unaware about no apple case, it just learns about apple being in the scene, so need to add such dataset as well.
+The depth node creates 3D samples in the camera optical frame. The motion node transforms their mean into `base_link`, then adds a configurable approach height in **base-frame Z**. This point is an approach target for the claw-link origin, not a measured object centre, grasp pose or finger contact point.
 
-Repairing Approach:
-- Planning to borrow apples dataset from COCO dataset, and try to finetune my existing trained model. so to provide new and different apple images examples with varying background.
-- Since we used YCB dataset because we needed 3D meshes of the apples for spawning the apples as another object in the Gazebo simulation so it remains unaffected with this repairing approach.
+## Build and run
+
+### 1. Prepare the workspace
+
+These commands assume ROS 2 Jazzy is already installed on Ubuntu 24.04 and `rosdep` is initialised. Use a ROS-compatible system Python environment; an unrelated virtual environment may hide ROS packages.
+
+For a **new checkout**:
+
+```bash
+mkdir -p ~/ros2_projects
+cd ~/ros2_projects
+git clone https://github.com/Shoaib3786/Perception-based-manipulator-5-DOF-.git roboArm_rosws
+cd roboArm_rosws
+source /opt/ros/jazzy/setup.bash
+
+sudo apt update
+sudo apt install python3-colcon-common-extensions python3-rosdep \
+  ros-jazzy-ros-gz ros-jazzy-gz-ros2-control ros-jazzy-moveit
+rosdep update
+rosdep install --from-paths src --ignore-src --rosdistro jazzy -r -y
+colcon build --symlink-install
+source install/setup.bash
+```
+
+If this workspace already exists, use it instead of cloning over it. Review and commit local changes before updating from GitHub. The build requires the Python `setup.py` and `setup.cfg` files included in this revision.
+
+**In every new terminal**, run:
+
+```bash
+cd ~/ros2_projects/roboArm_rosws
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+```
+
+### 2. Terminal 1 — simulation and controllers
+
+```bash
+ros2 launch roboarm_urdf_description gazebo.launch.py
+```
+
+This starts Gazebo with `perception_world2.sdf`, spawns the arm, starts `robot_state_publisher`, bridges the camera and clock topics, and spawns the three controllers. There is no need to launch another controller manager.
+
+To select the other supplied world:
+
+```bash
+ros2 launch roboarm_urdf_description gazebo.launch.py \
+  world:="$(ros2 pkg prefix --share roboarm_urdf_description)/worlds/perception_world.sdf"
+```
+
+Use only one of these simulation commands at a time.
+
+### 3. Terminal 2 — 2D segmentation
+
+```bash
+ros2 run perception_roboarm segmentation_node --ros-args -p use_sim_time:=true
+```
+
+The OpenCV windows show the original image, accepted mask and labelled regions. This node requires a graphical desktop. Press `q` in an image window or Ctrl+C to stop it.
+
+### 4. Terminal 3 — depth fusion
+
+```bash
+ros2 run perception_roboarm depth_node --ros-args -p use_sim_time:=true
+```
+
+The node waits for calibration and exactly matching depth/segmentation timestamps. It publishes `/perception/red/points`, `/perception/pink/points` and `/perception/green/points`, including empty clouds when a colour disappears.
+
+### 5. Terminal 4 — MoveIt and the approach node
+
+```bash
+ros2 launch roboarm_motion gazebo_moveit.launch.py \
+  rviz:=true \
+  cloud_topic:=/perception/red/points \
+  approach_height:=0.20
+```
+
+Set `rviz:=false` to use an existing RViz window. Starting this launch **does not move the arm automatically**.
+
+For this baseline, select a colour topic containing **one object**. The depth node combines all regions of the same colour; their combined mean would not represent a particular object if several are present.
+
+### 6. Terminal 5 — inspect, then request motion
+
+First check that the controllers are active:
+
+```bash
+ros2 control list_controllers -c /controller_manager
+ros2 action list
+```
+
+Expected controller names: `joint_state_broadcaster`, `joint_trajectory_controller`, `gripper_controller`. Expected actions include `/move_action` and `/joint_trajectory_controller/follow_joint_trajectory`.
+
+Request a plan without execution:
+
+```bash
+ros2 service call /approach_node/plan std_srvs/srv/Trigger '{}'
+```
+
+In RViz, use Fixed Frame `base_link`, planning group `arm`, and inspect the planned path. Add a Marker display for `/approach_node/target_marker` with transient-local durability to see the target.
+
+**Known limitation:** Gazebo's table and blocks are not automatically present in MoveIt's planning scene. An RViz point-cloud display does not add collision geometry. Add the environment through the planning-scene interface and verify frame alignment before relying on collision checking. The current approach is not a collision-safe grasp demonstration.
+
+To request planning and execution:
+
+```bash
+ros2 service call /approach_node/move std_srvs/srv/Trigger '{}'
+```
+
+This uses the latest target and **replans**; it does not execute the exact previously displayed preview. A successful service response means the request was submitted. Check the motion-node log for the final MoveIt result.
+
+To request cancellation:
+
+```bash
+ros2 service call /approach_node/cancel std_srvs/srv/Trigger '{}'
+```
+
+Keep the node running until the action result arrives. Closing its terminal is not a reliable cancellation mechanism.
+
+### Optional tools
+
+**Inspect only the robot model** in a separate session, with Gazebo stopped:
+
+```bash
+ros2 launch roboarm_urdf_description display.launch.py
+```
+
+This uses the joint-state GUI for visual inspection, not Gazebo control. Do not run it alongside the simulation because it introduces another robot-state/joint-state source.
+
+**Open RViz without a second robot-state publisher:**
+
+```bash
+rviz2 -d "$(ros2 pkg prefix --share roboarm_urdf_description)/rviz/rviz_config_display.rviz" \
+  --ros-args -p use_sim_time:=true
+```
+
+**Tune HSV thresholds** instead of running segmentation:
+
+```bash
+ros2 run perception_roboarm hsvTracking_node --ros-args -p use_sim_time:=true
+```
+
+**Inspect the ROS connections:**
+
+```bash
+ros2 topic list
+ros2 topic hz /camera/color/image_raw
+ros2 topic info /perception/segmentation_2d --verbose
+ros2 run tf2_ros tf2_echo base_link corrected_optical_frame
+```
+
+For direct `PointStamped` XYZ targets, see the [motion package guide](src/roboarm_motion/README.md#send-xyz-directly).
+
+## Package map
+
+| Package | Responsibility |
+| --- | --- |
+| `roboarm_urdf_description` | Robot, sensor, world, bridge configuration and simulation launch. |
+| `perception_interfaces` | `Segment2D` and `Segmentation2D` custom message definitions. |
+| `perception_roboarm` | HSV tuning, segmentation and depth back-projection. |
+| `roboarm_movit_config` | Setup Assistant's semantic model and planning configuration; the spelling is intentional here because it matches the package. |
+| `roboarm_motion` | Gazebo-specific MoveIt launch and service-triggered approach client. |
+| `roboarm_controller` | Earlier controller experiments; not required by the main launch sequence. |
+| `roboarm_proj1` | Earlier publisher/subscriber learning exercises. |
+
+Do not run the generated `roboarm_movit_config/demo.launch.py` beside the Gazebo integration launch: the demo can start a separate mock-hardware stack. The legacy `roboarm_controller/controller.launch.py` also references a commented-out `controller_manager` variable and is not a supported entry point.
+
+## Topics used by this implementation
+
+| Topic | Type | Purpose |
+| --- | --- | --- |
+| `/camera/color/image_raw` | `sensor_msgs/Image` | RGB image input. |
+| `/camera/depth/image_raw` | `sensor_msgs/Image` | Registered depth input assumed by the fusion code. |
+| `/camera/color/camera_info` | `sensor_msgs/CameraInfo` | Intrinsics for back-projection. |
+| `/perception/segmentation_2d` | `perception_interfaces/Segmentation2D` | Region masks and 2D measurements. |
+| `/perception/{red,pink,green}/points` | `sensor_msgs/PointCloud2` | Valid 3D samples grouped by colour. |
+| `/perception/target_xyz` | `geometry_msgs/PointStamped` | Optional direct target in point-input mode. |
+| `/joint_states` | `sensor_msgs/JointState` | Joint feedback for TF and MoveIt. |
+| `/clock` | `rosgraph_msgs/Clock` | Shared simulation time. |
+
+## What I am working on next
+
+1. Improve apple segmentation using varied images, backgrounds and negative examples; evaluate on held-out scenes.
+2. Add reproducible dataset conversion, training settings, model weights instructions and a ROS inference node.
+3. Preserve object instances through the 3D pipeline rather than merging by colour.
+4. Validate camera-frame headers, calibration and the Gazebo/world/base-frame relationship.
+5. Add table/object collision geometry to the MoveIt planning scene.
+6. Extend approach motion to grasp selection, gripper sequencing and pick-and-place.
+7. Measure mask precision/recall and mAP, perception latency, position error and task success rate.
+
+No measured accuracy, speed or grasp-success result is claimed yet. Launch names and interfaces have been checked against source code; a full clean build and simulation run must still be checked on the ROS 2 Jazzy machine.
