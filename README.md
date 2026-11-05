@@ -100,3 +100,11 @@ YOLO runtime node are not included in this repository.
   broad `setup*` ignore rules can silently omit files needed by fresh clones.
 - Local datasets should be placed and documented deliberately once their role is
   known. The existing root HDF5 files have been left untouched.
+
+## Verification
+
+On 2026-11-05, a fresh export of the committed source built all seven packages
+with `colcon build --symlink-install` under ROS 2 Jazzy. Shell syntax, Python
+syntax, package XML and local documentation links were checked. Dependency
+checks passed with the two rosdep skip keys documented above. Gazebo simulation,
+perception accuracy and MoveIt execution were not tested as part of this cleanup.
