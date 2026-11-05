@@ -43,10 +43,15 @@ From the workspace root in a Bash terminal:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-rosdep install --from-paths src --ignore-src -r -y
+rosdep install --from-paths src --ignore-src -r -y --skip-keys "ament_python warehouse_ros_mongo"
 colcon build --symlink-install
 source install/setup.bash
 ```
+
+The skip keys reflect unresolved rosdep definitions in the inspected Jazzy/Noble
+workspace. Ensure `ament_python` is available through your ROS installation.
+`warehouse_ros_mongo` is used by the optional `warehouse_db.launch.py`; install a
+compatible backend separately if you need database storage.
 
 These instructions require the ROS, Gazebo and MoveIt dependencies declared by the
 packages. A successful build does not by itself validate simulation or robot motion.
