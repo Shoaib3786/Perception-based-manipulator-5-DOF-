@@ -1,10 +1,12 @@
 # Camera / XYZ to MoveIt in Gazebo
 
-Built against repository snapshot c15d6e3. This package reuses the Setup Assistant's
+See the [workspace guide](../../README.md) for the repository layout.
+
+This package reuses the Setup Assistant's
 SRDF and planning configuration. It overrides the controller mapping, uses the
 Gazebo robot description directly, and enables KDL position-only IK. It does not
 start Gazebo, a second controller manager, mock hardware, or another robot-state
-publisher. Original packages are not modified.
+publisher. The integration uses the existing robot packages.
 
 ## Scope and prerequisites
 
@@ -31,7 +33,7 @@ Acceleration limits in the launch are demonstration values (0.5 rad/s^2 and
 
 ## Install
 
-Copy this `roboarm_motion` directory into your workspace's `src` directory.
+Run these commands from the existing workspace; the package is already in `src/`.
 
 ```bash
 cd ~/ros2_projects/roboArm_rosws
@@ -42,16 +44,13 @@ source install/setup.bash
 ```
 
 The skip keys are your existing workspace packages, built by colcon below.
-In the old perception manifest, `cv2` should be the rosdep key `python3-opencv`,
-not `cv2`, if you run rosdep over the entire workspace.
-
 ## Run with a point cloud
 
 Use separate sourced terminals:
 
 ```bash
 ros2 launch roboarm_urdf_description gazebo.launch.py
-ros2 run perception_roboarm segmentation_node
+ros2 run perception_roboarm segementation_node
 ros2 run perception_roboarm depth_node
 ros2 launch roboarm_motion gazebo_moveit.launch.py cloud_topic:=/perception/red/points approach_height:=0.20
 ```
@@ -140,7 +139,11 @@ publishing while requesting a plan. Both modes use the simulation clock.
 - Execution failure: check controller action names and joint lists.
 - Marker looks wrong: verify RGB/depth alignment, calibration and camera optical TF.
 
-## Validation
+## Validation history
+
+The following describes the original integration authoring environment, not a
+current workspace test result.
+
 
 Python syntax and XML/configuration structure were checked outside ROS. ROS 2,
 MoveIt, Gazebo and rclpy are not installed in the authoring environment, so colcon

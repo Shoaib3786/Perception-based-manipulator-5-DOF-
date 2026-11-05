@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-source ~/ros2_projects/roboArm_rosws/install/setup.bash
+ROBOARM_WORKSPACE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
 source /opt/ros/jazzy/setup.bash
+source "${ROBOARM_WORKSPACE}/install/setup.bash"
 
 ros2 action send_goal /joint_trajectory_controller/follow_joint_trajectory control_msgs/action/FollowJointTrajectory "{
   trajectory: {

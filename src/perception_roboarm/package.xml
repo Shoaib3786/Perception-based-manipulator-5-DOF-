@@ -15,7 +15,7 @@
   <exec_depend>message_filters</exec_depend>
   <exec_depend>sensor_msgs_py</exec_depend>
   <depend>rclpy</depend>
-  <depend>cv2</depend>
+  <depend>python3-opencv</depend>
   <depend>cv_bridge</depend>
   <depend>perception_interfaces</depend>
 

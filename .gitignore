@@ -1,0 +1,19 @@
+# Colcon output (workspace root only)
+/build/
+/install/
+/log/
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Editor recovery files and local settings
+*.swp
+*.swo
+*~
+.~lock.*#
+.vscode/
