@@ -28,7 +28,8 @@ setup(
             'segmentation_node=perception_roboarm.segmentation:main',
             # Keep the original spelling for existing launch commands.
             'segementation_node=perception_roboarm.segmentation:main',
-            'depth_node=perception_roboarm.depth_detection:main'
+            'depth_node=perception_roboarm.depth_detection:main',
+            'dataset_recorder=perception_roboarm.dataset_recorder:main'
         ],
     },
 )

@@ -16,6 +16,7 @@
   <exec_depend>joint_state_publisher_gui</exec_depend>
   <exec_depend>rviz2</exec_depend> 
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>perception_roboarm</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
 <!-- condition to use this package if the ros2 jazzy(or say greater than ros2 iron version) -->

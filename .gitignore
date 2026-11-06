@@ -17,3 +17,6 @@ venv/
 *~
 .~lock.*#
 .vscode/
+
+# Locally captured camera dataset
+/dataset/

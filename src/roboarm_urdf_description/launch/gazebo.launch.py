@@ -13,8 +13,13 @@
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, IncludeLaunchDescription, OpaqueFunction
 from launch.substitutions import Command, LaunchConfiguration
+from launch.conditions import IfCondition
+import tempfile
+import xml.etree.ElementTree as ET
+from launch.actions import RegisterEventHandler
+from launch.event_handlers import OnShutdown
 from launch_ros.parameter_descriptions import ParameterValue
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -44,7 +49,9 @@ def generate_launch_description():
     """
     robot_description = ParameterValue( 
         # command() - run shell commands at launch, xacro is the shell command that need xacro file to convert into urdf xml string this is given as OUTPUT
-        Command(["xacro ", LaunchConfiguration("model")]), # LaunchConfiguration() it is used to access the CLI varaible created by DeclareLaunchArgument --> that is, it takes the path of xacro file.
+        Command(["xacro ", LaunchConfiguration("model"),
+                 " image_width:=", LaunchConfiguration('image_width'),
+                 " image_height:=", LaunchConfiguration('image_height')]), # LaunchConfiguration() it is used to access the CLI varaible created by DeclareLaunchArgument --> that is, it takes the path of xacro file.
         value_type=str
     )   #it converts xacro file to pure urdf file
 
@@ -68,7 +75,9 @@ def generate_launch_description():
     gazebo_resource_path = SetEnvironmentVariable(
         name="GZ_SIM_RESOURCE_PATH",
         value=[
-                str(Path(robot_description_dir).parent.resolve())
+                str(Path(robot_description_dir).parent.resolve()), os.pathsep,
+                str(Path(robot_description_dir) / 'models'), os.pathsep,
+                os.environ.get('GZ_SIM_RESOURCE_PATH', '')
             ]
     )
 
@@ -104,14 +113,39 @@ def generate_launch_description():
     # Read the launch argument value
     world = LaunchConfiguration("world")
     
-    gazebo = IncludeLaunchDescription(
-        #specify type and directory of the file we want to launch
-        PythonLaunchDescriptionSource([  # type of the launch file is python launch file
-            os.path.join(get_package_share_directory("ros_gz_sim"), "launch"),  #ros_gz_sim is pre-installed ros2 packages just like robot_state_publisher
-            "/gz_sim.launch.py"]),
-        
-        launch_arguments={"gz_args": ["-v 4 -r ", world]}.items()
-    )
+    def start_gazebo(context):
+        enabled = LaunchConfiguration('enable_cameras').perform(context).lower() == 'true'
+        record = LaunchConfiguration('record_dataset').perform(context).lower() == 'true'
+        if record and not enabled:
+            raise ValueError('Dataset collection requires enable_cameras:=true for all five cameras')
+        width = int(LaunchConfiguration('image_width').perform(context))
+        height = int(LaunchConfiguration('image_height').perform(context))
+        if not (16 <= width <= 8192 and 16 <= height <= 8192):
+            raise ValueError('image_width and image_height must be between 16 and 8192')
+        world_path = world.perform(context)
+        actions = []
+        if enabled:
+            tree = ET.parse(world_path)
+            template = ET.parse(os.path.join(robot_description_dir, 'config', 'table_cameras.sdf'))
+            for camera in template.getroot().find('world').findall('model'):
+                image = camera.find('link/sensor/camera/image')
+                image.find('width').text = str(width)
+                image.find('height').text = str(height)
+                tree.getroot().find('world').append(camera)
+            with tempfile.NamedTemporaryFile(suffix='.sdf', prefix='roboarm-cameras-', delete=False) as stream:
+                tree.write(stream, encoding='utf-8', xml_declaration=True)
+                world_path = stream.name
+            def cleanup(context, *args, **kwargs):
+                Path(world_path).unlink(missing_ok=True)
+                return []
+            actions.append(RegisterEventHandler(OnShutdown(on_shutdown=[OpaqueFunction(function=cleanup)])))
+        actions.append(IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(
+                get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')),
+            launch_arguments={'gz_args': ['-v 4 -r ', world_path]}.items()))
+        return actions
+
+    gazebo = OpaqueFunction(function=start_gazebo)
 
 
     """ 
@@ -188,7 +222,21 @@ def generate_launch_description():
     )
             
 
+    dataset_arg = DeclareLaunchArgument(
+        'dataset_dir', default_value=str(Path.home() / 'ros2_projects' / 'roboArm_rosws' / 'dataset'),
+        description='Directory for camera1_*.jpg through camera5_*.jpg')
+    recorder = Node(package='perception_roboarm', executable='dataset_recorder',
+                    condition=IfCondition(LaunchConfiguration('record_dataset')),
+                    output='screen', parameters=[{'output_dir': LaunchConfiguration('dataset_dir'),
+                                                 'use_sim_time': True}])
+
     return LaunchDescription([
+        DeclareLaunchArgument('enable_cameras', default_value='false', choices=['true', 'false']),
+        DeclareLaunchArgument('record_dataset', default_value='false', choices=['true', 'false']),
+        DeclareLaunchArgument('image_width', default_value='800', description='Sensor image width for camera5 and any enabled corner cameras'),
+        DeclareLaunchArgument('image_height', default_value='800', description='Sensor image height for camera5 and any enabled corner cameras'),
+        dataset_arg,
+        recorder,
         model_arg,
         world_arg,
         config_file_arg,

@@ -250,3 +250,90 @@ Do not run the generated `roboarm_movit_config/demo.launch.py` beside the Gazebo
 7. Measure mask precision/recall and mAP, perception latency, position error and task success rate.
 
 No measured accuracy, speed or grasp-success result is claimed yet. Launch names and interfaces have been checked against source code; a full clean build and simulation run must still be checked on the ROS 2 Jazzy machine.
+
+## Apples and optional four-camera dataset
+
+The default world contains three movable apples, each uniformly scaled to a
+maximum dimension of 0.28 m, matching the blocks. All three use a smoothed version of the supplied mesh with averaged surface
+normals. Material colors are Candy Apple Red #FF0800, Apple Green #8DB600, and
+Canary Yellow #FFFF36. Colors are assigned directly without a texture override. Rendered pixels vary with lighting. Collision
+boxes and inertias match the enlarged bounds; each apple has an approximate 1.2 kg
+mass. The original supplied mesh files remain untouched.
+
+Cameras and recording are **off by default**. Start the normal simulation with:
+
+```bash
+ros2 launch roboarm_urdf_description gazebo.launch.py
+```
+
+To explicitly enable all four corner cameras and capture images, start a fresh
+simulation with:
+
+```bash
+ros2 launch roboarm_urdf_description gazebo.launch.py \
+  enable_cameras:=true record_dataset:=true \
+  image_width:=1280 image_height:=720 dataset_dir:="$PWD/dataset"
+```
+
+Set `image_width` and `image_height` to the desired capture resolution (16–8192
+pixels each). For cameras without recording, use `enable_cameras:=true` and leave
+`record_dataset` false. These are startup options: stop the current simulation
+before relaunching to change cameras or resolution. The arm-mounted RGB-D camera
+is independent and remains available as before.
+
+Capture runs at 5 simulation frames per second per camera while Gazebo is playing.
+ROS topics are `/camera1/image_raw` through `/camera4/image_raw`. The recorder saves
+each received image under `dataset/` as `camera1_000001.jpg`, `camera2_000001.jpg`,
+etc. Each camera has its own counter, which resumes after existing images. A
+filesystem lock prevents two recorders from writing the same directory. Dataset
+images are excluded from Git. Best Effort transport can drop messages under load.
+
+With Gazebo running (with or without corner cameras), start recording separately:
+
+```bash
+ros2 run perception_roboarm dataset_recorder --ros-args \
+  -p use_sim_time:=true -p output_dir:="$PWD/dataset"
+```
+
+Do not run a second recorder alongside `record_dataset:=true`. Capture does not
+create segmentation labels or train a detector. Apple detection and pick/place
+integration remain separate work; Gazebo objects are not automatically inserted
+into MoveIt's collision scene.
+
+### Claw camera recording (camera5)
+
+The same `record_dataset:=true` switch also records the existing claw-mounted
+RGB-D camera's color stream `/camera/color/image_raw` as `camera5_000001.jpg`,
+`camera5_000002.jpg`, etc., in the same `dataset_dir`. Its independent counter
+resumes after existing files, just like camera1–camera4. Starting the standalone
+`dataset_recorder` also records all five cameras.
+
+With recording off, the claw camera keeps publishing normally for segmentation;
+no recorder runs and no camera5 JPEGs are written. Recording is an additional
+Best Effort subscriber and does not replace or remap the segmentation feed.
+`image_width` and `image_height` configure the actual Gazebo RGB-D sensor
+resolution for camera5 and all enabled corner camera sensors. JPEGs are saved at
+their incoming resolution without resizing, padding, or cropping. Camera5's live
+color, depth and calibration streams use the requested sensor resolution.
+
+Normal simulation, camera5 only, no dataset recording:
+
+```bash
+ros2 launch roboarm_urdf_description gazebo.launch.py \
+  image_width:=640 image_height:=480
+```
+
+Dataset collection, all five cameras at the same resolution:
+
+```bash
+ros2 launch roboarm_urdf_description gazebo.launch.py \
+  enable_cameras:=true record_dataset:=true \
+  image_width:=1280 image_height:=720 dataset_dir:="$PWD/dataset"
+```
+
+Without arguments the normal simulation retains camera5's original 800×800
+sensor resolution, with corner cameras and recording off. Specify dimensions
+on the CLI, then restart the simulation to apply a new sensor resolution.
+Dataset launch requires the corner cameras to be enabled. The standalone
+recorder saves existing streams as-is; change sensor size through Gazebo launch,
+not recorder parameters. Filenames and per-camera counter behavior are unchanged.

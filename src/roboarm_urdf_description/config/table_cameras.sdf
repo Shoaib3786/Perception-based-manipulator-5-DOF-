@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version="1.9">
+  <world name="camera_templates">
+    <model name="table_camera1">
+      <static>true</static>
+      <pose>-1.5 -2.25 2.3 0 0.2798363968820691 0.5585993153435624</pose>
+      <link name="camera_link">
+        <visual name="body">
+          <pose>-0.06 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.08 0.10 0.08</size>
+            </box>
+          </geometry>
+          <material>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+        <sensor name="camera1" type="camera">
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <topic>/table_camera1/image</topic>
+          <camera>
+            <horizontal_fov>1.2</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>15</far>
+            </clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+    <model name="table_camera2">
+      <static>true</static>
+      <pose>-1.5 2.25 2.3 0 0.2798363968820691 -0.5585993153435624</pose>
+      <link name="camera_link">
+        <visual name="body">
+          <pose>-0.06 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.08 0.10 0.08</size>
+            </box>
+          </geometry>
+          <material>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+        <sensor name="camera2" type="camera">
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <topic>/table_camera2/image</topic>
+          <camera>
+            <horizontal_fov>1.2</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>15</far>
+            </clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+    <model name="table_camera3">
+      <static>true</static>
+      <pose>4.5 2.25 2.3 0 0.3551256703815447 -2.388441372627599</pose>
+      <link name="camera_link">
+        <visual name="body">
+          <pose>-0.06 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.08 0.10 0.08</size>
+            </box>
+          </geometry>
+          <material>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+        <sensor name="camera3" type="camera">
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <topic>/table_camera3/image</topic>
+          <camera>
+            <horizontal_fov>1.2</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>15</far>
+            </clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+    <model name="table_camera4">
+      <static>true</static>
+      <pose>4.5 -2.25 2.3 0 0.3551256703815447 2.388441372627599</pose>
+      <link name="camera_link">
+        <visual name="body">
+          <pose>-0.06 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.08 0.10 0.08</size>
+            </box>
+          </geometry>
+          <material>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+        <sensor name="camera4" type="camera">
+          <always_on>true</always_on>
+          <update_rate>5</update_rate>
+          <topic>/table_camera4/image</topic>
+          <camera>
+            <horizontal_fov>1.2</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.05</near>
+              <far>15</far>
+            </clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+  </world>
+</sdf>
