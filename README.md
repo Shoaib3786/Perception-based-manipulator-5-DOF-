@@ -167,7 +167,7 @@ Keep the node running until the action result arrives. Closing its terminal is n
 
 ### Optional tools
 
-**To Collect images of the objects on the table for Dataset generation** in a separate session close all gazebo simulations, also added custom image size argument for user defined image size capturing.
+**1. To Collect images of the objects on the table for Dataset generation**, in a separate session close all gazebo simulations and run the below command. It also has custom image size argument for user defined image size capturing for testing with different pretrained models.
 ```bash
 ros2 launch roboarm_urdf_description gazebo.launch.py \
   enable_cameras:=true record_dataset:=true \
@@ -175,12 +175,12 @@ ros2 launch roboarm_urdf_description gazebo.launch.py \
   dataset_dir:="$PWD/dataset"
 ```
 
-**Control robot joints using keyboard keys** in a separate session with Gazebo running:
+**2. Control robot joints using keyboard keys** in a separate session with Gazebo running:
 ```bash
 ros2 run roboarm_motion keyboard_teleop --ros-args -p use_sim_time:=true
 ```
 
-**Inspect only the robot model** in a separate session, with Gazebo stopped:
+**3. Inspect only the robot model** in a separate session, with Gazebo stopped:
 
 ```bash
 ros2 launch roboarm_urdf_description display.launch.py
@@ -188,20 +188,20 @@ ros2 launch roboarm_urdf_description display.launch.py
 
 This uses the joint-state GUI for visual inspection, not Gazebo control. Do not run it alongside the simulation because it introduces another robot-state/joint-state source.
 
-**Open RViz without a second robot-state publisher:**
+**4. Open RViz without a second robot_state_publisher node starts:**
 
 ```bash
 rviz2 -d "$(ros2 pkg prefix --share roboarm_urdf_description)/rviz/rviz_config_display.rviz" \
   --ros-args -p use_sim_time:=true
 ```
 
-**Tune HSV thresholds** instead of running segmentation:
+**5. Tune HSV thresholds** instead of running segmentation:
 
 ```bash
 ros2 run perception_roboarm hsvTracking_node --ros-args -p use_sim_time:=true
 ```
 
-**Inspect the ROS connections:**
+**6. Inspect the ROS connections:**
 
 ```bash
 ros2 topic list
