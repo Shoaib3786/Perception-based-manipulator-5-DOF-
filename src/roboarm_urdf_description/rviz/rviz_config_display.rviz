@@ -55,7 +55,7 @@ Visualization Manager:
       Description Source: Topic
       Description Topic:
         Depth: 5
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /robot_description
@@ -248,12 +248,66 @@ Visualization Manager:
         approach_target: true
       Topic:
         Depth: 5
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         Filter size: 10
         History Policy: Keep Last
-        Reliability Policy: Best Effort
+        Reliability Policy: Reliable
         Value: /approach_node/target_marker
       Value: true
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Red Points
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Filter size: 10
+        Value: /perception/red/points
+      Position Transformer: XYZ
+      Color Transformer: FlatColor
+      Color: 255; 0; 0
+      Style: Points
+      Size (Pixels): 3
+      Size (m): 0.01
+      Decay Time: 0
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Green Points
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Filter size: 10
+        Value: /perception/green/points
+      Position Transformer: XYZ
+      Color Transformer: FlatColor
+      Color: 0; 255; 0
+      Style: Points
+      Size (Pixels): 3
+      Size (m): 0.01
+      Decay Time: 0
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Pink Points
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Filter size: 10
+        Value: /perception/pink/points
+      Position Transformer: XYZ
+      Color Transformer: FlatColor
+      Color: 255; 80; 180
+      Style: Points
+      Size (Pixels): 3
+      Size (m): 0.01
+      Decay Time: 0
     - Class: moveit_rviz_plugin/Trajectory
       Color Enabled: false
       Enabled: true
@@ -333,7 +387,7 @@ Visualization Manager:
       State Display Time: 3x
       Trail Step Size: 1
       Trajectory Topic: /display_planned_path
-      Use Sim Time: false
+      Use Sim Time: true
       Value: true
   Enabled: true
   Global Options:

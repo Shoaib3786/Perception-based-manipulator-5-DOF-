@@ -29,7 +29,6 @@ class DisplayNode(Node):
             u_s = cv2.getTrackbarPos("U - S", "Trackbars")
             u_v = cv2.getTrackbarPos("U - V", "Trackbars")
 
-
             # Convert ROS Image msg → OpenCV (NumPy) array
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)

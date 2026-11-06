@@ -11,5 +11,8 @@ setup(
     install_requires=['setuptools'], zip_safe=True,
     maintainer='Shoaib Khan', maintainer_email='mohammad.shoaib3786@gmail.com',
     description='Perception to MoveIt Gazebo approach demo', license='BSD-3-Clause',
-    entry_points={'console_scripts': ['approach_node = roboarm_motion.approach_node:main']},
+    entry_points={'console_scripts': [
+        'approach_node = roboarm_motion.approach_node:main',
+        'keyboard_teleop = roboarm_motion.keyboard_teleop:main',
+    ]},
 )

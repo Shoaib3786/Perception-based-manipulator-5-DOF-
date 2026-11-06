@@ -25,6 +25,8 @@ setup(
     entry_points={
         'console_scripts': [
             'hsvTracking_node=perception_roboarm.hsv_color_tracking:main',
+            'segmentation_node=perception_roboarm.segmentation:main',
+            # Keep the original spelling for existing launch commands.
             'segementation_node=perception_roboarm.segmentation:main',
             'depth_node=perception_roboarm.depth_detection:main'
         ],

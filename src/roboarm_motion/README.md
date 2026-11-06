@@ -50,7 +50,7 @@ Use separate sourced terminals:
 
 ```bash
 ros2 launch roboarm_urdf_description gazebo.launch.py
-ros2 run perception_roboarm segementation_node
+ros2 run perception_roboarm segmentation_node
 ros2 run perception_roboarm depth_node
 ros2 launch roboarm_motion gazebo_moveit.launch.py cloud_topic:=/perception/red/points approach_height:=0.20
 ```
@@ -149,3 +149,56 @@ Python syntax and XML/configuration structure were checked outside ROS. ROS 2,
 MoveIt, Gazebo and rclpy are not installed in the authoring environment, so colcon
 build, runtime message construction, TF matching, planning and execution MUST be
 validated in your Jazzy/Gazebo workspace. No successful robot execution is claimed.
+
+## Camera and cloud viewer
+
+With Gazebo already running, use `bash scripts/view-camera.bash` from the
+workspace root, or `ros2 launch roboarm_motion view_camera.launch.py` for RViz
+alone. This supplies URDF and SRDF directly to RViz so its Trajectory display can
+load the model. It starts no controller, state publisher, or MoveIt server.
+The saved view subscribes to red, green and pink clouds with Best Effort QoS,
+matching `depth_node`. If adding a new cloud display manually, set its Topic
+Reliability Policy to Best Effort.
+
+Run both perception nodes with `--ros-args -p use_sim_time:=true` when using Gazebo.
+Old-message TF warnings can appear briefly at startup or after a simulation reset.
+If they persist, verify `/clock` advances and restart the viewer and perception
+nodes after a reset; check that image/cloud stamps and TF use the same simulation
+clock. Do not replace capture timestamps with the current time to hide TF errors.
+
+## Keyboard joint controller
+
+Start Gazebo and its controllers, then in a separate interactive terminal:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run roboarm_motion keyboard_teleop --ros-args -p use_sim_time:=true
+```
+
+| Joint | Increase | Decrease |
+| --- | --- | --- |
+| joint_1 | Q | A |
+| joint_2 | W | S |
+| joint_3 | E | D |
+| joint_4 | R | F |
+| joint_prism | T | G |
+| joint_5 (gripper) | Y | H |
+
+The other finger (`joint_6`) follows its mimic joint. Keys command numeric joint
+directions, which depend on the URDF axes. Each key event jogs from the latest
+measured joint position. Holding a key relies on your terminal's key repeat.
+Default increments are 0.04 rad and 0.005 m; `+`/`-` change step size.
+Space requests a hold at measured positions; X or Ctrl-C requests a hold and exits.
+Releasing a key lets the last short trajectory finish. This is not an emergency
+stop or a dead-man controller. Stale states prevent sending a hold as well as a jog.
+
+The node reads limits from the robot URDF and requires fresh `/joint_states` and
+a controller topic subscriber before publishing. It sends all joints of the
+selected controller, keeping the others at their measured positions. Stop other
+motion clients before jogging: topic trajectories can preempt MoveIt/action goals.
+Direct joint control performs no collision checking. Use in simulation first.
+
+Optional parameters: `angular_step`, `linear_step`, `duration` (minimum trajectory
+time in seconds), and `state_timeout` (wall-time age of joint-state reception).
+For example, append `-p angular_step:=0.02 -p linear_step:=0.002` for smaller steps.
