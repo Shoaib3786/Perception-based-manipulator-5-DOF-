@@ -167,6 +167,14 @@ Keep the node running until the action result arrives. Closing its terminal is n
 
 ### Optional tools
 
+**To Collect images of the objects on the table for Dataset generation** in a separate session close all gazebo simulations, also use user input argument for different image size capturing.
+```bash
+ros2 launch roboarm_urdf_description gazebo.launch.py \
+  enable_cameras:=true record_dataset:=true \
+  image_width:=1920 image_height:=1080 \
+  dataset_dir:="$PWD/dataset"
+```
+
 **Control robot joints using keyboard keys** in a separate session with Gazebo running:
 ```bash
 ros2 run roboarm_motion keyboard_teleop --ros-args -p use_sim_time:=true
