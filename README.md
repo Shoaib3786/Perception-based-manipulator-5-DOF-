@@ -83,9 +83,9 @@ source install/setup.bash
 ```
 
 ### 2. Terminal 1 — simulation and controllers
-
+image size custom argument provided so that different detection model could be integrated with the captured images.
 ```bash
-ros2 launch roboarm_urdf_description gazebo.launch.py
+ros2 launch roboarm_urdf_description gazebo.launch.py image_width:=640 image_height:=480
 ```
 
 This starts Gazebo with `perception_world2.sdf`, spawns the arm, starts `robot_state_publisher`, bridges the camera and clock topics, and spawns the three controllers. There is no need to launch another controller manager.
@@ -167,11 +167,11 @@ Keep the node running until the action result arrives. Closing its terminal is n
 
 ### Optional tools
 
-**To Collect images of the objects on the table for Dataset generation** in a separate session close all gazebo simulations, also use user input argument for different image size capturing.
+**To Collect images of the objects on the table for Dataset generation** in a separate session close all gazebo simulations, also added custom image size argument for user defined image size capturing.
 ```bash
 ros2 launch roboarm_urdf_description gazebo.launch.py \
   enable_cameras:=true record_dataset:=true \
-  image_width:=1920 image_height:=1080 \
+  image_width:=1280 image_height:=720 \
   dataset_dir:="$PWD/dataset"
 ```
 
