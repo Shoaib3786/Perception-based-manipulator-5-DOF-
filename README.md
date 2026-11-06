@@ -167,6 +167,11 @@ Keep the node running until the action result arrives. Closing its terminal is n
 
 ### Optional tools
 
+**Control robot joints using keyboard keys** in a separate session with Gazebo running:
+```bash
+ros2 run roboarm_motion keyboard_teleop --ros-args -p use_sim_time:=true
+```
+
 **Inspect only the robot model** in a separate session, with Gazebo stopped:
 
 ```bash
