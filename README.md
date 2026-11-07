@@ -121,10 +121,19 @@ The node waits for calibration and exactly matching depth/segmentation timestamp
 ros2 launch roboarm_motion gazebo_moveit.launch.py \
   rviz:=true \
   cloud_topic:=/perception/red/points \
-  approach_height:=0.20
+  approach_height:=0.20 \
+  velocity_scaling:=0.5 \
+  acceleration_scaling:=0.5
 ```
 
 Set `rviz:=false` to use an existing RViz window. Starting this launch **does not move the arm automatically**.
+
+`velocity_scaling:=0.5` and `acceleration_scaling:=0.5` **to increases the speed of execution**, by defaults scaling factor is 0.1.
+To change the speed of execution in between the robot being executed, the command is:
+```bash
+ros2 param set /approach_node velocity_scaling 0.5
+ros2 param set /approach_node acceleration_scaling 0.5
+```
 
 For this baseline, select a colour topic containing **one object**. The depth node combines all regions of the same colour; their combined mean would not represent a particular object if several are present.
 
