@@ -81,6 +81,10 @@ cd ~/ros2_projects/roboArm_rosws
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
+or
+```bash
+source script/setup-venv.bash
+```
 
 ### 2. Terminal 1 — simulation and controllers
 image size custom argument provided so that different detection model could be integrated with the captured images.
@@ -115,64 +119,53 @@ ros2 run perception_roboarm depth_node --ros-args -p use_sim_time:=true
 
 The node waits for calibration and exactly matching depth/segmentation timestamps. It publishes `/perception/red/points`, `/perception/pink/points` and `/perception/green/points`, including empty clouds when a colour disappears.
 
-### 5. Terminal 4 — MoveIt and the approach node
 
+### 5. Terminal 4 — Grasping and Reaching to Target location combined (motion_pick.launch.py)
 ```bash
-ros2 launch roboarm_motion gazebo_moveit.launch.py \
-  rviz:=true \
-  cloud_topic:=/perception/red/points \
-  approach_height:=0.20 \
-  velocity_scaling:=0.5 \
-  acceleration_scaling:=0.5
+ros2 launch roboarm_motion pick.launch.py   cloud_topic:=/perception/red/points   velocity_scaling:=0.5 acceleration_scaling:=0.5   grasp_insertion_depth:=0.03
 ```
+Allows the velocity and acceleration control along with the controlling the offset of the object from the gripper for better grasping. The launch file handles motion planning & Execution for whole robotic arm along with gripper pick up operation.
 
 Set `rviz:=false` to use an existing RViz window. Starting this launch **does not move the arm automatically**.
 
 `velocity_scaling:=0.5` and `acceleration_scaling:=0.5` **to increases the speed of execution**, by defaults scaling factor is 0.1.
 To change the speed of execution in between the robot being executed, the command is:
 ```bash
-ros2 param set /approach_node velocity_scaling 0.5
-ros2 param set /approach_node acceleration_scaling 0.5
+ros2 param set /pick_node velocity_scaling 0.5
+ros2 param set /pick_node acceleration_scaling 0.5
 ```
 
 For this baseline, select a colour topic containing **one object**. The depth node combines all regions of the same colour; their combined mean would not represent a particular object if several are present.
 
-### 6. Terminal 5 — inspect, then request motion
+In RViz, do use Fixed Frame `base_link`, planning group `arm`, and inspect the planned path. Add a Marker display for `/approach_node/target_marker` with transient-local durability to see the target.
 
-First check that the controllers are active:
+
+### 6. Terminal 5 — request motion
+```bash
+ros2 service call /pick_node/plan_pick std_srvs/srv/Trigger '{}'
+```
+Planning the trajectory, for Arm + Gripper.
 
 ```bash
-ros2 control list_controllers -c /controller_manager
-ros2 action list
+ros2 service call /pick_node/pick std_srvs/srv/Trigger '{}'
 ```
-
-Expected controller names: `joint_state_broadcaster`, `joint_trajectory_controller`, `gripper_controller`. Expected actions include `/move_action` and `/joint_trajectory_controller/follow_joint_trajectory`.
-
-Request a plan without execution:
+Execute motion request after planning.
 
 ```bash
-ros2 service call /approach_node/plan std_srvs/srv/Trigger '{}'
+ros2 service call /pick_node/cancel std_srvs/srv/Trigger '{}'
 ```
+cancel the execution request.
 
-In RViz, use Fixed Frame `base_link`, planning group `arm`, and inspect the planned path. Add a Marker display for `/approach_node/target_marker` with transient-local durability to see the target.
+Keep the nodes running until the action result arrives. Closing its terminal is not a reliable cancellation mechanism.
 
-**Known limitation:** Gazebo's table and blocks are not automatically present in MoveIt's planning scene. An RViz point-cloud display does not add collision geometry. Add the environment through the planning-scene interface and verify frame alignment before relying on collision checking. The current approach is not a collision-safe grasp demonstration.
 
-To request planning and execution:
+**Known limitation:**
+- The Gazebo table, blocks, and apples are not automatically added to MoveIt’s planning scene. MoveIt can therefore plan through obstacles visible in Gazebo.
+- SRDF disables several robot-link collision pairs using reason="Never". Those exclusions needs working upon it.
+- Descent and lift use planned joint motions; they are not guaranteed straight-line movements.
+- The carried object is represented by an approximate sphere. Its actual attachment, contact, and slipping are to be worked upon.
+- The gripper’s closing motion has no force/contact feedback yet.
 
-```bash
-ros2 service call /approach_node/move std_srvs/srv/Trigger '{}'
-```
-
-This uses the latest target and **replans**; it does not execute the exact previously displayed preview. A successful service response means the request was submitted. Check the motion-node log for the final MoveIt result.
-
-To request cancellation:
-
-```bash
-ros2 service call /approach_node/cancel std_srvs/srv/Trigger '{}'
-```
-
-Keep the node running until the action result arrives. Closing its terminal is not a reliable cancellation mechanism.
 
 ### Optional tools
 
@@ -237,16 +230,133 @@ Do not run the generated `roboarm_movit_config/demo.launch.py` beside the Gazebo
 
 ## Topics used by this implementation
 
-| Topic | Type | Purpose |
+### Simulation, robot model and joint feedback
+| Topic | Message type | Producer → consumer | Purpose / availability |
+| --- | --- | --- | --- |
+| `/clock` | `rosgraph_msgs/msg/Clock` | Gazebo → `ros_gz_bridge` → simulation-time nodes | Shared simulation clock. Nodes use it when `use_sim_time:=true`. |
+| `/joint_states` | `sensor_msgs/msg/JointState` | Joint-state broadcaster → robot-state publisher, MoveIt, keyboard node | Measured joint positions and available velocities/efforts. Used for robot transforms, planning start states and keyboard feedback checks. |
+| `/tf` | `tf2_msgs/msg/TFMessage` | Robot-state publisher → TF listeners, MoveIt, RViz | Dynamic link transforms calculated from joint states. |
+| `/tf_static` | `tf2_msgs/msg/TFMessage` | Robot-state publisher → TF listeners, MoveIt, RViz | Fixed transforms, including camera mounts, optical-frame correction and fingertip frames. Frame names are entries within TF messages, not separate topics. |
+| `/robot_description` | `std_msgs/msg/String` | Robot-state publisher; also configured for MoveIt publication → Gazebo spawn/RViz/model consumers | URDF robot description. The same name is also used as a node parameter. |
+| `/robot_description_semantic` | `std_msgs/msg/String` | MoveIt, when its description publication is running → semantic-model consumers | SRDF groups, end-effector and collision exclusions. Also supplied directly as a parameter by the camera-viewer launch. Not a camera stream. |
+
+### Claw-mounted RGB-D camera — camera5
+| ROS topic | Message type | Gazebo bridge source | Purpose / consumers |
+| --- | --- | --- | --- |
+| `/camera/color/image_raw` | `sensor_msgs/msg/Image` | `/rgbd_camera/image` | Claw color images. Used by segmentation, HSV tuning, image viewers and dataset recording as `camera5_*.jpg`. |
+| `/camera/depth/image_raw` | `sensor_msgs/msg/Image` | `/rgbd_camera/depth_image` | Depth image consumed by `depth_node` with timestamp-matched segmentation results. |
+| `/camera/color/camera_info` | `sensor_msgs/msg/CameraInfo` | `/rgbd_camera/camera_info` | Camera intrinsics (`fx`, `fy`, `cx`, `cy`) used to back-project pixels and depth into XYZ coordinates. |
+| `/camera/points` | `sensor_msgs/msg/PointCloud2` | `/rgbd_camera/points` | Gazebo's full RGB-D point cloud. This is distinct from the color-filtered clouds generated by `depth_node`; the current fusion node uses depth images and camera calibration rather than subscribing to this full cloud. |
+
+`camera5` is the dataset filename prefix for `/camera/color/image_raw`.
+The claw camera remains available during normal simulation when dataset recording
+and the four corner cameras are disabled.
+
+### Optional table-corner cameras
+| ROS topic | Message type | Gazebo bridge source | Purpose / consumers |
+| --- | --- | --- | --- |
+| `/camera1/image_raw` | `sensor_msgs/msg/Image` | `/table_camera1/image` | Corner camera 1 images; recorder saves `camera1_*.jpg`. |
+| `/camera2/image_raw` | `sensor_msgs/msg/Image` | `/table_camera2/image` | Corner camera 2 images; recorder saves `camera2_*.jpg`. |
+| `/camera3/image_raw` | `sensor_msgs/msg/Image` | `/table_camera3/image` | Corner camera 3 images; recorder saves `camera3_*.jpg`. |
+| `/camera4/image_raw` | `sensor_msgs/msg/Image` | `/table_camera4/image` | Corner camera 4 images; recorder saves `camera4_*.jpg`. |
+
+The corner sensors are enabled with `enable_cameras:=true`. Their bridge entries
+exist in the configuration even when the sensors are disabled, so discovery of a
+ROS endpoint alone does not prove frames are arriving. Dataset recording is
+controlled separately by `record_dataset:=true`.
+
+`image_width` and `image_height` configure the actual camera sensor resolution;
+in dataset mode all five cameras use the same requested dimensions. The recorder
+subscribes to the image topics and writes JPEGs to `dataset_dir`; it does not
+publish a separate image-download or dataset topic.
+
+### Perception results and target input
+| Topic | Message type | Producer → consumer | Purpose / limitations |
+| --- | --- | --- | --- |
+| `/perception/segmentation_2d` | `perception_interfaces/msg/Segmentation2D` | `segmentation_node` → `depth_node` | Image-stamped array of detections containing color, centroid, bounding box, pixel count and binary mask. |
+| `/perception/red/points` | `sensor_msgs/msg/PointCloud2` | `depth_node` → selected motion node, RViz | Valid depth-derived points for red regions. Default cloud input for approach/pick. |
+| `/perception/green/points` | `sensor_msgs/msg/PointCloud2` | `depth_node` → selected motion node, RViz | Valid points for green regions. Select with `cloud_topic:=/perception/green/points`. |
+| `/perception/pink/points` | `sensor_msgs/msg/PointCloud2` | `depth_node` → selected motion node, RViz | Valid points for pink regions. |
+| `/perception/target_xyz` | `geometry_msgs/msg/PointStamped` | External publisher → approach or pick node | Optional stamped XYZ input when `input_mode:=point`. Topic can be overridden with `target_topic`. |
+
+`Segment2D` is an element inside `Segmentation2D`, not a standalone topic. It
+contains `name`, `color`, `centroid_u/v`, `bbox_xywh`, `pixel_count` and an image
+mask. The outer message supplies the capture header used for synchronization.
+
+Each color cloud currently combines all visible detections of that color.
+The motion nodes use its mean point, which is a visible-surface mean rather than
+a guaranteed object center. Use one object per selected color cloud or provide
+an explicit point target. There is currently no dedicated apple-instance or
+canary-yellow segmentation topic.
+
+### Motion preview and pick progress
+| Topic | Message type | Producer → consumer | Purpose / availability |
+| --- | --- | --- | --- |
+| `/display_planned_path` | `moveit_msgs/msg/DisplayTrajectory` | Approach/pick node and MoveIt preview facilities → RViz | Planned trajectories for visual inspection. A displayed path is not proof of execution or grasp retention. |
+| `/approach_node/target_marker` | `visualization_msgs/msg/Marker` | `approach_node` → RViz Marker display | Requested approach target sphere. |
+| `/pick_node/grasp_poses` | `geometry_msgs/msg/PoseArray` | `pick_node` → RViz PoseArray display | Desired contact poses for pregrasp, grasp and lift, expressed in the target frame. |
+| `/pick_node/status` | `std_msgs/msg/String` | `pick_node` → CLI or monitoring tools | Preview, preflight, execution-stage, failure, cancellation and completion messages. Controller completion does not verify object contact or retention. |
+| `/pick_node/target_marker` | `visualization_msgs/msg/Marker` | Inherited approach functionality in `pick_node` → RViz | Publisher exists through inheritance. The full `/pick_node/pick` sequence publishes `grasp_poses`; the inherited simple approach services publish this marker. |
+
+The custom preview/status publishers above use Reliable, Transient Local QoS.
+Set RViz durability to Transient Local when you want the latest retained message.
+
+
+### MoveIt planning-scene interfaces
+
+These standard MoveIt interfaces are available when the appropriate MoveIt
+capabilities/scene monitor are running. Their presence and resolved namespace
+should be checked at runtime; they are not additional custom perception outputs.
+
+| Topic | Message type | Purpose |
 | --- | --- | --- |
-| `/camera/color/image_raw` | `sensor_msgs/Image` | RGB image input. |
-| `/camera/depth/image_raw` | `sensor_msgs/Image` | Registered depth input assumed by the fusion code. |
-| `/camera/color/camera_info` | `sensor_msgs/CameraInfo` | Intrinsics for back-projection. |
-| `/perception/segmentation_2d` | `perception_interfaces/Segmentation2D` | Region masks and 2D measurements. |
-| `/perception/{red,pink,green}/points` | `sensor_msgs/PointCloud2` | Valid 3D samples grouped by colour. |
-| `/perception/target_xyz` | `geometry_msgs/PointStamped` | Optional direct target in point-input mode. |
-| `/joint_states` | `sensor_msgs/JointState` | Joint feedback for TF and MoveIt. |
-| `/clock` | `rosgraph_msgs/Clock` | Shared simulation time. |
+| `/planning_scene` | `moveit_msgs/msg/PlanningScene` | Incoming scene updates, including world collision objects and scene changes. |
+| `/monitored_planning_scene` | `moveit_msgs/msg/PlanningScene` | MoveIt's monitored scene output for tools such as RViz. |
+| `/collision_object` | `moveit_msgs/msg/CollisionObject` | Add, remove or move world collision geometry in the planning scene. |
+| `/attached_collision_object` | `moveit_msgs/msg/AttachedCollisionObject` | Describe collision geometry attached to a robot link for planning. This does not physically weld an object in Gazebo. |
+
+Gazebo table/object visuals and RViz point-cloud displays do not automatically
+populate these collision-scene interfaces in the current project.
+
+### Services — commands, not topics
+| Service | Service type | Purpose |
+| --- | --- | --- |
+| `/approach_node/plan` | `std_srvs/srv/Trigger` | Submit an approach plan without execution. |
+| `/approach_node/move` | `std_srvs/srv/Trigger` | Submit approach planning and execution. |
+| `/approach_node/cancel` | `std_srvs/srv/Trigger` | Request cancellation of the active approach action. |
+| `/pick_node/plan_pick` | `std_srvs/srv/Trigger` | Plan all pick stages without physical motion. |
+| `/pick_node/pick` | `std_srvs/srv/Trigger` | Preflight the full sequence, then execute if planning succeeds. |
+| `/pick_node/cancel` | `std_srvs/srv/Trigger` | Request cancellation; keep the node alive until the action ends. |
+| `/pick_node/plan` and `/pick_node/move` | `std_srvs/srv/Trigger` | Inherited simple-approach services. Use `plan_pick` / `pick` for the full grasp-and-lift workflow. |
+| `/get_planning_scene` | `moveit_msgs/srv/GetPlanningScene` | Read MoveIt's scene and robot-state information. |
+| `/apply_planning_scene` | `moveit_msgs/srv/ApplyPlanningScene` | Apply scene updates synchronously. |
+| `/check_state_validity` | `moveit_msgs/srv/GetStateValidity` | Check a robot configuration against joint constraints and collisions. |
+
+Trigger responses acknowledge submission, not eventual motion completion.
+Monitor node logs and `/pick_node/status` for final results. Controller-manager,
+parameter, IK and planning services can also be created by ROS/MoveIt plugins;
+use `ros2 service list -t` to inspect the running deployment.
+
+### Actions — planning and execution requests
+
+| Action name | Action type | Purpose |
+| --- | --- | --- |
+| `/move_action` | `moveit_msgs/action/MoveGroup` | Approach/pick requests to MoveIt, including plan-only and plan-plus-execute goals. Run only one server for this action. |
+| `/execute_trajectory` | `moveit_msgs/action/ExecuteTrajectory` | Standard MoveIt trajectory-execution capability, when loaded. The custom nodes use `/move_action`. |
+| `/joint_trajectory_controller/follow_joint_trajectory` | `control_msgs/action/FollowJointTrajectory` | Arm trajectory execution through the existing controller. |
+| `/gripper_controller/follow_joint_trajectory` | `control_msgs/action/FollowJointTrajectory` | Gripper trajectory execution through the existing controller. |
+
+With the desired simulation and nodes running, inspect the actual graph:
+
+```bash
+ros2 topic list -t
+ros2 topic list -t --include-hidden-topics
+ros2 topic info /perception/green/points --verbose
+ros2 topic hz /camera/color/image_raw
+ros2 topic echo /pick_node/status
+ros2 service list -t
+ros2 action list -t
+```
 
 ## What I am working on next
 
