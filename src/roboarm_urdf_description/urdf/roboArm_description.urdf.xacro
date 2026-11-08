@@ -248,4 +248,17 @@
         <limit lower="0" upper="${PI/2}" effort="${joint_prism_effort}" velocity="${velocity}"/>
     </joint>
 
+    <!-- Distal 3 cm pad centers, measured from the scaled STL collision meshes.
+         These frames move with the fingers; the pick TCP is their midpoint at
+         the configured closing angle, not a fixed camera/claw origin. -->
+    <link name="right_fingertip"/>
+    <joint name="right_fingertip_joint" type="fixed">
+        <parent link="gripper_right"/><child link="right_fingertip"/>
+        <origin xyz="-0.06968209267 0.585000001 0.0454499998" rpy="0 0 0"/>
+    </joint>
+    <link name="left_fingertip"/>
+    <joint name="left_fingertip_joint" type="fixed">
+        <parent link="gripper_left"/><child link="left_fingertip"/>
+        <origin xyz="0.07125 0.585000001 0.0454499998" rpy="0 0 0"/>
+    </joint>
 </robot> 

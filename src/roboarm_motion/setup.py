@@ -13,6 +13,7 @@ setup(
     description='Perception to MoveIt Gazebo approach demo', license='BSD-3-Clause',
     entry_points={'console_scripts': [
         'approach_node = roboarm_motion.approach_node:main',
+        'pick_node = roboarm_motion.pick_node:main',
         'keyboard_teleop = roboarm_motion.keyboard_teleop:main',
     ]},
 )

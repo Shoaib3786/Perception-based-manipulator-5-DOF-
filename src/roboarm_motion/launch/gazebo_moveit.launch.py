@@ -25,6 +25,8 @@ def generate_launch_description():
         .to_moveit_configs()
     )
     parameters = config.to_dict()
+    parameters['robot_description_kinematics']['arm']['position_only_ik'] = ParameterValue(
+        LaunchConfiguration('position_only_ik'), value_type=bool)
     # The generated config references a nonexistent Kinect. Do not start those updaters.
     # This does NOT add the Gazebo table or boxes to the MoveIt planning scene.
     parameters.pop('sensors', None)
@@ -39,10 +41,17 @@ def generate_launch_description():
         values['has_acceleration_limits'] = True
         values['max_acceleration'] = 0.02 if name == 'joint_prism' else 0.5
     return LaunchDescription([
+        DeclareLaunchArgument('use_fingertip_target', default_value='true'),
+        DeclareLaunchArgument('reference_gripper_angle', default_value='-0.2406546887035444'),
+        DeclareLaunchArgument('start_approach', default_value='true'),
+        DeclareLaunchArgument('position_only_ik', default_value='true'),
+        DeclareLaunchArgument('target_topic', default_value='/perception/target_xyz'),
         DeclareLaunchArgument('rviz', default_value='false'),
         DeclareLaunchArgument('cloud_topic', default_value='/perception/red/points'),
         DeclareLaunchArgument('input_mode', default_value='cloud'),
         DeclareLaunchArgument('approach_height', default_value='0.20'),
+        DeclareLaunchArgument('velocity_scaling', default_value='0.1'),
+        DeclareLaunchArgument('acceleration_scaling', default_value='0.1'),
         Node(package='moveit_ros_move_group', executable='move_group',
              output='screen', parameters=[parameters]),
         Node(package='rviz2', executable='rviz2', output='screen',
@@ -50,10 +59,16 @@ def generate_launch_description():
              arguments=['-d', os.path.join(original, 'config', 'moveit.rviz')],
              parameters=[parameters]),
         Node(package='roboarm_motion', executable='approach_node', output='screen',
+             condition=IfCondition(LaunchConfiguration('start_approach')),
              parameters=[{
                  'use_sim_time': True,
+                 'use_fingertip_target': ParameterValue(LaunchConfiguration('use_fingertip_target'), value_type=bool),
+                 'reference_gripper_angle': ParameterValue(LaunchConfiguration('reference_gripper_angle'), value_type=float),
+                 'velocity_scaling': ParameterValue(LaunchConfiguration('velocity_scaling'), value_type=float),
+                 'acceleration_scaling': ParameterValue(LaunchConfiguration('acceleration_scaling'), value_type=float),
                  'cloud_topic': LaunchConfiguration('cloud_topic'),
                  'input_mode': LaunchConfiguration('input_mode'),
+                 'target_topic': LaunchConfiguration('target_topic'),
                  'approach_height': ParameterValue(LaunchConfiguration('approach_height'), value_type=float),
              }]),
     ])

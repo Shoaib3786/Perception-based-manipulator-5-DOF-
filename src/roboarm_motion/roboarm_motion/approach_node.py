@@ -13,6 +13,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, DurabilityPolicy
 from rclpy.time import Time
 from rclpy.executors import ExternalShutdownException
+from rcl_interfaces.msg import SetParametersResult
 from geometry_msgs.msg import PointStamped, Pose
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
@@ -23,11 +24,12 @@ from tf2_geometry_msgs import do_transform_point
 from moveit_msgs.action import MoveGroup
 from moveit_msgs.msg import Constraints, PositionConstraint, DisplayTrajectory, MoveItErrorCodes
 from visualization_msgs.msg import Marker
+from .gripper_geometry import load_finger_pads, fingertip_geometry
 
 
 class ApproachNode(Node):
-    def __init__(self):
-        super().__init__('approach_node')
+    def __init__(self, node_name='approach_node'):
+        super().__init__(node_name)
         defaults = {
             'input_mode': 'cloud', 
             'cloud_topic': '/perception/red/points',
@@ -36,14 +38,34 @@ class ApproachNode(Node):
             'group': 'arm', 
             'tip_link': 'claw_link', 
             'approach_height': 0.20,
+            'use_fingertip_target': True,
+            'reference_gripper_angle': -0.2406546887035444,
             'max_target_age': 2.0, 
             'position_tolerance': 0.01,
+            'velocity_scaling': 0.1,
+            'acceleration_scaling': 0.1,
         }
         for name, value in defaults.items():
             self.declare_parameter(name, value)
         self.settings = {name: self.get_parameter(name).value for name in defaults}
         if self.settings['input_mode'] not in ('cloud', 'point'):
             raise ValueError('input_mode must be cloud or point')
+        for name in ('velocity_scaling', 'acceleration_scaling'):
+            value = self.settings[name]
+            if not np.isfinite(value) or not 0.0 < value <= 1.0:
+                raise ValueError(f'{name} must be in (0, 1]')
+        self.approach_tcp = (0., 0., 0.)
+        if self.settings['use_fingertip_target']:
+            if self.settings['tip_link'] != 'claw_link':
+                raise ValueError('Fingertip targeting expects tip_link=claw_link')
+            angle = self.settings['reference_gripper_angle']
+            if not np.isfinite(angle) or not -np.pi / 2 <= angle <= 0:
+                raise ValueError('reference_gripper_angle must be within joint_5 limits')
+            pads, _ = load_finger_pads()
+            midpoint, _, _ = fingertip_geometry(pads, angle)
+            self.approach_tcp = tuple(map(float, midpoint))
+            self.get_logger().info(f'Approach targets the finger midpoint, claw-frame offset={self.approach_tcp}')
+        self.add_on_set_parameters_callback(self.update_speed)
         self.buffer = Buffer(node=self)
         self.listener = TransformListener(self.buffer, self)
         self.latest = None
@@ -69,6 +91,34 @@ class ApproachNode(Node):
         self.get_logger().info(
             f"Input mode={self.settings['input_mode']}. Waiting for input; "
             'call /approach_node/plan or /approach_node/move. No automatic motion.')
+
+    def update_speed(self, parameters):
+        updates = {}
+        for parameter in parameters:
+            if parameter.name in ('velocity_scaling', 'acceleration_scaling'):
+                value = parameter.value
+                if self.busy:
+                    return SetParametersResult(successful=False, reason='Wait for active motion to finish')
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value) or not 0 < value <= 1:
+                    return SetParametersResult(successful=False, reason='Speed scaling must be in (0, 1]')
+                updates[parameter.name] = float(value)
+        self.settings.update(updates)
+        return SetParametersResult(successful=True)
+
+    def resolve_target(self):
+        if self.latest is None or not self.latest.header.frame_id:
+            raise ValueError('No valid target; check the input topic and frame_id')
+        point = copy.deepcopy(self.latest)
+        age = (self.get_clock().now() - Time.from_msg(point.header.stamp)).nanoseconds / 1e9
+        if age < -0.1 or age > self.settings['max_target_age']:
+            raise ValueError(f'Target age {age:.3f}s is invalid; republish with capture time')
+        if point.header.frame_id != self.settings['target_frame']:
+            transform = self.buffer.lookup_transform(
+                self.settings['target_frame'], point.header.frame_id, Time.from_msg(point.header.stamp))
+            point = do_transform_point(point, transform)
+        point.header.frame_id = self.settings['target_frame']
+        point.header.stamp = self.get_clock().now().to_msg()
+        return point
 
     def on_cloud(self, msg):
         # Empty clouds invalidate old targets rather than retaining a vanished object.
@@ -167,8 +217,8 @@ class ApproachNode(Node):
         request.pipeline_id = 'ompl'
         request.num_planning_attempts = 5
         request.allowed_planning_time = 5.0
-        request.max_velocity_scaling_factor = 0.1
-        request.max_acceleration_scaling_factor = 0.1
+        request.max_velocity_scaling_factor = float(self.settings['velocity_scaling'])
+        request.max_acceleration_scaling_factor = float(self.settings['acceleration_scaling'])
         request.start_state.is_diff = True  # Use current monitored joint state.
         request.workspace_parameters.header.frame_id = self.settings['target_frame']
         request.workspace_parameters.min_corner.x = -10.0
@@ -180,6 +230,10 @@ class ApproachNode(Node):
         constraint = PositionConstraint()
         constraint.header = point.header
         constraint.link_name = self.settings['tip_link']
+        offset = getattr(self, 'approach_tcp', (0., 0., 0.))
+        constraint.target_point_offset.x = offset[0]
+        constraint.target_point_offset.y = offset[1]
+        constraint.target_point_offset.z = offset[2]
         constraint.weight = 1.0
         region = SolidPrimitive()
         region.type = SolidPrimitive.SPHERE
