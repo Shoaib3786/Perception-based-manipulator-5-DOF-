@@ -171,7 +171,47 @@
         </visual>
       </link>
     </model>
-    <model name="red_cube">
+    
+    
+    <model name="yellow_apple">
+      <static>false</static>
+      <link name="apple_link">
+        <inertial>
+          <mass>1.2</mass>
+          <inertia>
+            <ixx>0.01373227446734563</ixx>
+            <iyy>0.013633128506987474</iyy>
+            <izz>0.015580854039641844</izz>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.27822390335199176 0.28 0.2427400763645268</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0.027150333279601715 -0.013143632003209125 -0.1373870879225674 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://ycb_apple/meshes/apple_smooth.obj</uri>
+              <scale>3.445386320093616 3.445386320093616 3.445386320093616</scale>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>1.0 1.0 0.21176470588235294 1</ambient>
+            <diffuse>1.0 1.0 0.21176470588235294 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+      <pose>3.0 -0.45 1.1643700381822633 0 0 0</pose>
+    </model>
+    <!-- <model name="red_cube">
       <pose>2.6 0.0 1.18 0 0 0</pose>
       <link name="cube_link">
         <inertial>
@@ -199,9 +239,12 @@
             </box>
           </geometry>
           <material>
-            <!-- <ambient>0.95 0.10 0.10 1</ambient>
+            <ambient>0.95 0.10 0.10 1</ambient>
             <diffuse>0.95 0.10 0.10 1</diffuse>
-            <specular>0.10 0.10 0.10 1</specular> -->
+            <specular>0.10 0.10 0.10 1</specular> 
+
+
+
             <ambient>0.3 0.01 0.9 1</ambient>
             <diffuse>0.3 0.01 0.9 1</diffuse>
             <specular>0.5 0.5 0.9 1</specular>
@@ -321,44 +364,7 @@
         </visual>
       </link>
       <pose>2.1 -0.45 1.1643700381822633 0 0 0</pose>
-    </model>
-    <model name="golden_apple">
-      <static>false</static>
-      <link name="apple_link">
-        <inertial>
-          <mass>1.2</mass>
-          <inertia>
-            <ixx>0.01373227446734563</ixx>
-            <iyy>0.013633128506987474</iyy>
-            <izz>0.015580854039641844</izz>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyz>0</iyz>
-          </inertia>
-        </inertial>
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>0.27822390335199176 0.28 0.2427400763645268</size>
-            </box>
-          </geometry>
-        </collision>
-        <visual name="visual">
-          <pose>0.027150333279601715 -0.013143632003209125 -0.1373870879225674 0 0 0</pose>
-          <geometry>
-            <mesh>
-              <uri>model://ycb_apple/meshes/apple_smooth.obj</uri>
-              <scale>3.445386320093616 3.445386320093616 3.445386320093616</scale>
-            </mesh>
-          </geometry>
-          <material>
-            <ambient>1.0 1.0 0.21176470588235294 1</ambient>
-            <diffuse>1.0 1.0 0.21176470588235294 1</diffuse>
-            <specular>0.1 0.1 0.1 1</specular>
-          </material>
-        </visual>
-      </link>
-      <pose>3.0 -0.45 1.1643700381822633 0 0 0</pose>
-    </model>
+    </model> -->
+
   </world>
 </sdf>

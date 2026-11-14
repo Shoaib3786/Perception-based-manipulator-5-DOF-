@@ -20,3 +20,5 @@ venv/
 
 # Locally captured camera dataset
 /dataset/
+
+013_apple_berkeley*
