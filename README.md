@@ -10,7 +10,7 @@ The current arm has **four revolute joints and one prismatic joint**, with a sep
 
 ## Where to start
 
-- [Current implementation and limitations](#current-status)
+- [Current implementation](#current-status)
 - [Build and launch commands](#build-and-run)
 - [My development workflow](docs/WORKFLOW.md)
 - [Detailed MoveIt interface](src/roboarm_motion/README.md)
@@ -30,23 +30,7 @@ The current arm has **four revolute joints and one prismatic joint**, with a sep
 
 The supplied world contains coloured blocks; it does not yet include a packaged YCB apple asset. The launch sequence below runs the **HSV baseline**, not a YOLO apple pipeline.
 
-## How the pipeline connects
 
-```mermaid
-flowchart TD
-    A[Gazebo RGB-D camera] --> B[ROS image and calibration topics]
-    B --> C[HSV segmentation]
-    B --> D[Depth fusion]
-    C -->|Masks with image timestamp| D
-    D --> E[Colour-specific point clouds]
-    E --> F[Surface mean and capture-time TF]
-    F --> G[Explicit plan or move request]
-    G --> H[MoveIt 2 and OMPL]
-    H --> I[Joint trajectory controller]
-    I --> J[Gazebo arm]
-```
-
-The depth node creates 3D samples in the camera optical frame. The motion node transforms their mean into `base_link`, then adds a configurable approach height in **base-frame Z**. This point is an approach target for the claw-link origin, not a measured object centre, grasp pose or finger contact point.
 
 ## Build and run
 
@@ -87,7 +71,7 @@ source script/setup-venv.bash
 ```
 
 ### 2. Terminal 1 — simulation and controllers
-image size custom argument provided so that different detection model could be integrated with the captured images.
+custom image size argument provided so that different kind of detection model who ask different input image size could be integrated with the captured images easily. In this it uses  camera5(Claw link mounted camera) only.
 ```bash
 ros2 launch roboarm_urdf_description gazebo.launch.py image_width:=640 image_height:=480
 ```
@@ -226,21 +210,9 @@ For direct `PointStamped` XYZ targets, see the [motion package guide](src/roboar
 | `roboarm_controller` | Earlier controller experiments; not required by the main launch sequence. |
 | `roboarm_proj1` | Earlier publisher/subscriber learning exercises. |
 
-Do not run the generated `roboarm_movit_config/demo.launch.py` beside the Gazebo integration launch: the demo can start a separate mock-hardware stack. The legacy `roboarm_controller/controller.launch.py` also references a commented-out `controller_manager` variable and is not a supported entry point.
-
 ## Topics used by this implementation
 
-### Simulation, robot model and joint feedback
-| Topic | Message type | Producer → consumer | Purpose / availability |
-| --- | --- | --- | --- |
-| `/clock` | `rosgraph_msgs/msg/Clock` | Gazebo → `ros_gz_bridge` → simulation-time nodes | Shared simulation clock. Nodes use it when `use_sim_time:=true`. |
-| `/joint_states` | `sensor_msgs/msg/JointState` | Joint-state broadcaster → robot-state publisher, MoveIt, keyboard node | Measured joint positions and available velocities/efforts. Used for robot transforms, planning start states and keyboard feedback checks. |
-| `/tf` | `tf2_msgs/msg/TFMessage` | Robot-state publisher → TF listeners, MoveIt, RViz | Dynamic link transforms calculated from joint states. |
-| `/tf_static` | `tf2_msgs/msg/TFMessage` | Robot-state publisher → TF listeners, MoveIt, RViz | Fixed transforms, including camera mounts, optical-frame correction and fingertip frames. Frame names are entries within TF messages, not separate topics. |
-| `/robot_description` | `std_msgs/msg/String` | Robot-state publisher; also configured for MoveIt publication → Gazebo spawn/RViz/model consumers | URDF robot description. The same name is also used as a node parameter. |
-| `/robot_description_semantic` | `std_msgs/msg/String` | MoveIt, when its description publication is running → semantic-model consumers | SRDF groups, end-effector and collision exclusions. Also supplied directly as a parameter by the camera-viewer launch. Not a camera stream. |
-
-### Claw-mounted RGB-D camera — camera5
+### 1. Claw-mounted RGB-D camera — camera5
 | ROS topic | Message type | Gazebo bridge source | Purpose / consumers |
 | --- | --- | --- | --- |
 | `/camera/color/image_raw` | `sensor_msgs/msg/Image` | `/rgbd_camera/image` | Claw color images. Used by segmentation, HSV tuning, image viewers and dataset recording as `camera5_*.jpg`. |
@@ -252,7 +224,7 @@ Do not run the generated `roboarm_movit_config/demo.launch.py` beside the Gazebo
 The claw camera remains available during normal simulation when dataset recording
 and the four corner cameras are disabled.
 
-### Optional table-corner cameras
+### 2. Optional table-corner cameras
 | ROS topic | Message type | Gazebo bridge source | Purpose / consumers |
 | --- | --- | --- | --- |
 | `/camera1/image_raw` | `sensor_msgs/msg/Image` | `/table_camera1/image` | Corner camera 1 images; recorder saves `camera1_*.jpg`. |
@@ -270,7 +242,7 @@ in dataset mode all five cameras use the same requested dimensions. The recorder
 subscribes to the image topics and writes JPEGs to `dataset_dir`; it does not
 publish a separate image-download or dataset topic.
 
-### Perception results and target input
+### 3. Perception results and target input
 | Topic | Message type | Producer → consumer | Purpose / limitations |
 | --- | --- | --- | --- |
 | `/perception/segmentation_2d` | `perception_interfaces/msg/Segmentation2D` | `segmentation_node` → `depth_node` | Image-stamped array of detections containing color, centroid, bounding box, pixel count and binary mask. |
@@ -289,36 +261,8 @@ a guaranteed object center. Use one object per selected color cloud or provide
 an explicit point target. There is currently no dedicated apple-instance or
 canary-yellow segmentation topic.
 
-### Motion preview and pick progress
-| Topic | Message type | Producer → consumer | Purpose / availability |
-| --- | --- | --- | --- |
-| `/display_planned_path` | `moveit_msgs/msg/DisplayTrajectory` | Approach/pick node and MoveIt preview facilities → RViz | Planned trajectories for visual inspection. A displayed path is not proof of execution or grasp retention. |
-| `/approach_node/target_marker` | `visualization_msgs/msg/Marker` | `approach_node` → RViz Marker display | Requested approach target sphere. |
-| `/pick_node/grasp_poses` | `geometry_msgs/msg/PoseArray` | `pick_node` → RViz PoseArray display | Desired contact poses for pregrasp, grasp and lift, expressed in the target frame. |
-| `/pick_node/status` | `std_msgs/msg/String` | `pick_node` → CLI or monitoring tools | Preview, preflight, execution-stage, failure, cancellation and completion messages. Controller completion does not verify object contact or retention. |
-| `/pick_node/target_marker` | `visualization_msgs/msg/Marker` | Inherited approach functionality in `pick_node` → RViz | Publisher exists through inheritance. The full `/pick_node/pick` sequence publishes `grasp_poses`; the inherited simple approach services publish this marker. |
 
-The custom preview/status publishers above use Reliable, Transient Local QoS.
-Set RViz durability to Transient Local when you want the latest retained message.
-
-
-### MoveIt planning-scene interfaces
-
-These standard MoveIt interfaces are available when the appropriate MoveIt
-capabilities/scene monitor are running. Their presence and resolved namespace
-should be checked at runtime; they are not additional custom perception outputs.
-
-| Topic | Message type | Purpose |
-| --- | --- | --- |
-| `/planning_scene` | `moveit_msgs/msg/PlanningScene` | Incoming scene updates, including world collision objects and scene changes. |
-| `/monitored_planning_scene` | `moveit_msgs/msg/PlanningScene` | MoveIt's monitored scene output for tools such as RViz. |
-| `/collision_object` | `moveit_msgs/msg/CollisionObject` | Add, remove or move world collision geometry in the planning scene. |
-| `/attached_collision_object` | `moveit_msgs/msg/AttachedCollisionObject` | Describe collision geometry attached to a robot link for planning. This does not physically weld an object in Gazebo. |
-
-Gazebo table/object visuals and RViz point-cloud displays do not automatically
-populate these collision-scene interfaces in the current project.
-
-### Services — commands, not topics
+## Services — commands, not topics
 | Service | Service type | Purpose |
 | --- | --- | --- |
 | `/approach_node/plan` | `std_srvs/srv/Trigger` | Submit an approach plan without execution. |
@@ -328,23 +272,7 @@ populate these collision-scene interfaces in the current project.
 | `/pick_node/pick` | `std_srvs/srv/Trigger` | Preflight the full sequence, then execute if planning succeeds. |
 | `/pick_node/cancel` | `std_srvs/srv/Trigger` | Request cancellation; keep the node alive until the action ends. |
 | `/pick_node/plan` and `/pick_node/move` | `std_srvs/srv/Trigger` | Inherited simple-approach services. Use `plan_pick` / `pick` for the full grasp-and-lift workflow. |
-| `/get_planning_scene` | `moveit_msgs/srv/GetPlanningScene` | Read MoveIt's scene and robot-state information. |
-| `/apply_planning_scene` | `moveit_msgs/srv/ApplyPlanningScene` | Apply scene updates synchronously. |
-| `/check_state_validity` | `moveit_msgs/srv/GetStateValidity` | Check a robot configuration against joint constraints and collisions. |
 
-Trigger responses acknowledge submission, not eventual motion completion.
-Monitor node logs and `/pick_node/status` for final results. Controller-manager,
-parameter, IK and planning services can also be created by ROS/MoveIt plugins;
-use `ros2 service list -t` to inspect the running deployment.
-
-### Actions — planning and execution requests
-
-| Action name | Action type | Purpose |
-| --- | --- | --- |
-| `/move_action` | `moveit_msgs/action/MoveGroup` | Approach/pick requests to MoveIt, including plan-only and plan-plus-execute goals. Run only one server for this action. |
-| `/execute_trajectory` | `moveit_msgs/action/ExecuteTrajectory` | Standard MoveIt trajectory-execution capability, when loaded. The custom nodes use `/move_action`. |
-| `/joint_trajectory_controller/follow_joint_trajectory` | `control_msgs/action/FollowJointTrajectory` | Arm trajectory execution through the existing controller. |
-| `/gripper_controller/follow_joint_trajectory` | `control_msgs/action/FollowJointTrajectory` | Gripper trajectory execution through the existing controller. |
 
 With the desired simulation and nodes running, inspect the actual graph:
 
@@ -359,100 +287,13 @@ ros2 action list -t
 ```
 
 ## What I am working on next
+1. Adding more objects basically new variants of apples as an object in the scene.
+2. Using the 4 new camera setup + 1 robot mounted camera to capture images of the objects in the scene for dataset collection.
+3. Start building my Computer vision pipeline for implementing Object Segmentation for pick and place operation on this robotic arm.
+4. Pipeline includes:
+    - Dataset Preparation & Analysis
+    - CNN Model Selection based on dataset analysis report.
+    - Train the model over Google Colab
+    - Perform Evaluation
+    - Implement Deployment process
 
-1. Improve apple segmentation using varied images, backgrounds and negative examples; evaluate on held-out scenes.
-2. Add reproducible dataset conversion, training settings, model weights instructions and a ROS inference node.
-3. Preserve object instances through the 3D pipeline rather than merging by colour.
-4. Validate camera-frame headers, calibration and the Gazebo/world/base-frame relationship.
-5. Add table/object collision geometry to the MoveIt planning scene.
-6. Extend approach motion to grasp selection, gripper sequencing and pick-and-place.
-7. Measure mask precision/recall and mAP, perception latency, position error and task success rate.
-
-No measured accuracy, speed or grasp-success result is claimed yet. Launch names and interfaces have been checked against source code; a full clean build and simulation run must still be checked on the ROS 2 Jazzy machine.
-
-## Apples and optional four-camera dataset
-
-The default world contains three movable apples, each uniformly scaled to a
-maximum dimension of 0.28 m, matching the blocks. All three use a smoothed version of the supplied mesh with averaged surface
-normals. Material colors are Candy Apple Red #FF0800, Apple Green #8DB600, and
-Canary Yellow #FFFF36. Colors are assigned directly without a texture override. Rendered pixels vary with lighting. Collision
-boxes and inertias match the enlarged bounds; each apple has an approximate 1.2 kg
-mass. The original supplied mesh files remain untouched.
-
-Cameras and recording are **off by default**. Start the normal simulation with:
-
-```bash
-ros2 launch roboarm_urdf_description gazebo.launch.py
-```
-
-To explicitly enable all four corner cameras and capture images, start a fresh
-simulation with:
-
-```bash
-ros2 launch roboarm_urdf_description gazebo.launch.py \
-  enable_cameras:=true record_dataset:=true \
-  image_width:=1280 image_height:=720 dataset_dir:="$PWD/dataset"
-```
-
-Set `image_width` and `image_height` to the desired capture resolution (16–8192
-pixels each). For cameras without recording, use `enable_cameras:=true` and leave
-`record_dataset` false. These are startup options: stop the current simulation
-before relaunching to change cameras or resolution. The arm-mounted RGB-D camera
-is independent and remains available as before.
-
-Capture runs at 5 simulation frames per second per camera while Gazebo is playing.
-ROS topics are `/camera1/image_raw` through `/camera4/image_raw`. The recorder saves
-each received image under `dataset/` as `camera1_000001.jpg`, `camera2_000001.jpg`,
-etc. Each camera has its own counter, which resumes after existing images. A
-filesystem lock prevents two recorders from writing the same directory. Dataset
-images are excluded from Git. Best Effort transport can drop messages under load.
-
-With Gazebo running (with or without corner cameras), start recording separately:
-
-```bash
-ros2 run perception_roboarm dataset_recorder --ros-args \
-  -p use_sim_time:=true -p output_dir:="$PWD/dataset"
-```
-
-Do not run a second recorder alongside `record_dataset:=true`. Capture does not
-create segmentation labels or train a detector. Apple detection and pick/place
-integration remain separate work; Gazebo objects are not automatically inserted
-into MoveIt's collision scene.
-
-### Claw camera recording (camera5)
-
-The same `record_dataset:=true` switch also records the existing claw-mounted
-RGB-D camera's color stream `/camera/color/image_raw` as `camera5_000001.jpg`,
-`camera5_000002.jpg`, etc., in the same `dataset_dir`. Its independent counter
-resumes after existing files, just like camera1–camera4. Starting the standalone
-`dataset_recorder` also records all five cameras.
-
-With recording off, the claw camera keeps publishing normally for segmentation;
-no recorder runs and no camera5 JPEGs are written. Recording is an additional
-Best Effort subscriber and does not replace or remap the segmentation feed.
-`image_width` and `image_height` configure the actual Gazebo RGB-D sensor
-resolution for camera5 and all enabled corner camera sensors. JPEGs are saved at
-their incoming resolution without resizing, padding, or cropping. Camera5's live
-color, depth and calibration streams use the requested sensor resolution.
-
-Normal simulation, camera5 only, no dataset recording:
-
-```bash
-ros2 launch roboarm_urdf_description gazebo.launch.py \
-  image_width:=640 image_height:=480
-```
-
-Dataset collection, all five cameras at the same resolution:
-
-```bash
-ros2 launch roboarm_urdf_description gazebo.launch.py \
-  enable_cameras:=true record_dataset:=true \
-  image_width:=1280 image_height:=720 dataset_dir:="$PWD/dataset"
-```
-
-Without arguments the normal simulation retains camera5's original 800×800
-sensor resolution, with corner cameras and recording off. Specify dimensions
-on the CLI, then restart the simulation to apply a new sensor resolution.
-Dataset launch requires the corner cameras to be enabled. The standalone
-recorder saves existing streams as-is; change sensor size through Gazebo launch,
-not recorder parameters. Filenames and per-camera counter behavior are unchanged.
