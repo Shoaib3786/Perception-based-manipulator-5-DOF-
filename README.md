@@ -8,6 +8,14 @@ The current arm has **four revolute joints and one prismatic joint**, with a sep
 
 **Stack:** Ubuntu 24.04 · ROS 2 Jazzy · Gazebo Harmonic · Python · OpenCV · NumPy · MoveIt 2 · ros2_control
 
+
+
+https://github.com/user-attachments/assets/59f17d8a-ea37-4d1c-9f52-54c49e8454e4
+
+
+
+
+
 ## Where to start
 
 - [Current implementation](#current-status)
@@ -165,6 +173,10 @@ ros2 launch roboarm_urdf_description gazebo.launch.py \
 ```bash
 ros2 run roboarm_motion keyboard_teleop --ros-args -p use_sim_time:=true
 ```
+
+
+https://github.com/user-attachments/assets/db317907-b733-436c-8279-a4aabdacac86
+
 
 **3. Inspect only the robot model** in a separate session, with Gazebo stopped:
 
